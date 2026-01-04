@@ -3,98 +3,215 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Expense Tracker Widget</title>
+  <title>Notion Expense Tracker</title>
   <style>
+    :root {
+      /* Strawberry Matcha palette */
+      --bg: #fff7f9;
+      --card: #ffffff;
+      --primary: #f28cab;   /* strawberry */
+      --secondary: #7fbf9b; /* matcha */
+      --text: #2f2f2f;
+      --muted: #888;
+    }
+
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #ffffff;
+      background: var(--bg);
       padding: 16px;
-      max-width: 420px;
+      max-width: 520px;
       margin: auto;
+      color: var(--text);
     }
+
     h2 { margin-bottom: 8px; }
-    label { font-size: 14px; }
-    input {
-      width: 100%;
-      padding: 6px;
-      margin: 4px 0 10px;
+
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      margin-bottom: 14px;
     }
+
+    label { font-size: 13px; color: var(--muted); }
+
+    input, select {
+      width: 100%;
+      padding: 7px;
+      margin: 4px 0 10px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+
     button {
       width: 100%;
-      padding: 8px;
+      padding: 9px;
       border: none;
-      background: #111;
+      background: var(--primary);
       color: white;
-      border-radius: 6px;
+      border-radius: 10px;
       cursor: pointer;
       margin-bottom: 8px;
+      font-weight: 600;
     }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      margin-bottom: 10px;
+    }
+
+    .tab {
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eee;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .tab.active {
+      background: var(--secondary);
+      color: white;
+    }
+
     .progress {
       background: #eee;
-      border-radius: 8px;
+      border-radius: 999px;
       overflow: hidden;
-      height: 16px;
+      height: 14px;
       margin: 10px 0;
     }
+
     .progress-bar {
       height: 100%;
-      background: #4caf50;
+      background: linear-gradient(90deg, var(--secondary), var(--primary));
       width: 0%;
       transition: width 0.3s;
     }
+
     table {
       width: 100%;
       font-size: 13px;
       border-collapse: collapse;
     }
+
     th, td {
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid #eee;
       padding: 6px;
       text-align: left;
+    }
+
+    .pill {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      color: white;
+    }
+
+    .fixed { background: var(--secondary); }
+    .variable { background: var(--primary); }
+
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+
+    .export {
+      background: #222;
     }
   </style>
 </head>
 <body>
-  <h2>Monthly Expense Tracker</h2>
 
+<h2>Expense Tracker</h2>
+
+<div class="tabs" id="monthTabs"></div>
+
+<div class="card">
   <label>Monthly Income</label>
-  <input id="income" type="number" placeholder="e.g. 2500" />
+  <input id="income" type="number" />
 
-  <label>Add Expense (Bills or Sudden)</label>
-  <input id="expenseName" placeholder="Expense name" />
-  <input id="expenseAmount" type="number" placeholder="Amount" />
-  <button onclick="addExpense()">Add Expense</button>
+  <div class="row">
+    <div>
+      <label>Expense name</label>
+      <input id="expenseName" />
+    </div>
+    <div>
+      <label>Amount</label>
+      <input id="expenseAmount" type="number" />
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Type</label>
+      <select id="expenseType">
+        <option value="fixed">Fixed</option>
+        <option value="variable">Variable</option>
+      </select>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button onclick="addExpense()">Add</button>
+    </div>
+  </div>
 
   <div class="progress">
     <div id="progressBar" class="progress-bar"></div>
   </div>
 
   <p><strong>Remaining:</strong> <span id="remaining">0</span></p>
+</div>
 
+<div class="card">
   <table>
     <thead>
-      <tr><th>Expense</th><th>Amount</th></tr>
+      <tr><th>Expense</th><th>Type</th><th>Amount</th></tr>
     </thead>
     <tbody id="expenseTable"></tbody>
   </table>
+</div>
+
+<div class="card">
+  <button class="export" onclick="exportCSV()">Export Monthly Spreadsheet (CSV)</button>
+</div>
 
 <script>
-  const monthKey = new Date().toISOString().slice(0,7);
-  const data = JSON.parse(localStorage.getItem(monthKey)) || { income: 0, expenses: [] };
-
+  const store = JSON.parse(localStorage.getItem('expense-tracker')) || {};
+  const tabs = document.getElementById('monthTabs');
   const incomeInput = document.getElementById('income');
   const table = document.getElementById('expenseTable');
   const remainingEl = document.getElementById('remaining');
   const progressBar = document.getElementById('progressBar');
 
-  incomeInput.value = data.income;
+  let currentMonth = new Date().toISOString().slice(0,7);
+  if (!store[currentMonth]) store[currentMonth] = { income: 0, expenses: [] };
+
+  function save() {
+    localStorage.setItem('expense-tracker', JSON.stringify(store));
+  }
+
+  function renderTabs() {
+    tabs.innerHTML = '';
+    Object.keys(store).sort().forEach(m => {
+      const el = document.createElement('div');
+      el.className = 'tab' + (m === currentMonth ? ' active' : '');
+      el.textContent = m;
+      el.onclick = () => { currentMonth = m; render(); };
+      tabs.appendChild(el);
+    });
+  }
 
   function render() {
+    const data = store[currentMonth];
+    incomeInput.value = data.income;
     table.innerHTML = '';
+
     let spent = 0;
     data.expenses.forEach(e => {
       spent += e.amount;
-      table.innerHTML += `<tr><td>${e.name}</td><td>${e.amount}</td></tr>`;
+      table.innerHTML += `<tr><td>${e.name}</td><td><span class="pill ${e.type}">${e.type}</span></td><td>${e.amount}</td></tr>`;
     });
 
     const remaining = data.income - spent;
@@ -103,25 +220,44 @@
     const percent = data.income ? Math.min(100, (spent / data.income) * 100) : 0;
     progressBar.style.width = percent + '%';
 
-    localStorage.setItem(monthKey, JSON.stringify(data));
+    save();
+    renderTabs();
   }
 
   incomeInput.addEventListener('input', () => {
-    data.income = Number(incomeInput.value);
+    store[currentMonth].income = Number(incomeInput.value);
     render();
   });
 
   function addExpense() {
-    const name = document.getElementById('expenseName').value;
-    const amount = Number(document.getElementById('expenseAmount').value);
+    const name = expenseName.value;
+    const amount = Number(expenseAmount.value);
+    const type = expenseType.value;
     if (!name || !amount) return;
-    data.expenses.push({ name, amount });
-    document.getElementById('expenseName').value = '';
-    document.getElementById('expenseAmount').value = '';
+    store[currentMonth].expenses.push({ name, amount, type });
+    expenseName.value = '';
+    expenseAmount.value = '';
     render();
+  }
+
+  function exportCSV() {
+    const data = store[currentMonth];
+    let csv = 'Month,Income,Expense,Type,Amount\n';
+    data.expenses.forEach(e => {
+      csv += `${currentMonth},${data.income},${e.name},${e.type},${e.amount}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expenses-${currentMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   render();
 </script>
+
 </body>
 </html>
