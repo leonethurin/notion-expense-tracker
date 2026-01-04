@@ -6,39 +6,40 @@
 <title>Notion Expense Tracker</title>
 <style>
 :root{
-  --bg:#fff7f9;--card:#fff;--primary:#f28cab;--secondary:#7fbf9b;
+  --bg:#fff7f9;--card:#fff;--strawberry:#f28cab;--matcha:#7fbf9b;
   --warning:#ffb703;--danger:#ef476f;--text:#2f2f2f;--muted:#777;
 }
 *{box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);padding:16px;max-width:1100px;margin:auto;color:var(--text)}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);padding:16px;max-width:1200px;margin:auto;color:var(--text)}
 h2{margin-bottom:8px}
 .card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
 label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
 input,select{width:100%;padding:8px;border-radius:10px;border:1px solid #ddd;margin-bottom:12px}
-button{padding:8px 12px;border:none;border-radius:10px;background:var(--primary);color:white;font-weight:600;cursor:pointer}
+button{padding:8px 12px;border:none;border-radius:10px;background:var(--strawberry);color:white;font-weight:600;cursor:pointer}
 button.dark{background:#222}
 button.small{font-size:12px;padding:4px 8px}
 .tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
 .tab{padding:6px 12px;border-radius:999px;background:#eee;font-size:13px;cursor:pointer}
-.tab.active{background:var(--secondary);color:white}
+.tab.active{background:var(--matcha);color:white}
 .layout{display:grid;grid-template-columns:2fr 1fr;gap:14px}
 .progress{background:#eee;border-radius:999px;overflow:hidden;height:14px;margin:8px 0}
 .progress-bar{height:100%;width:0%;transition:.3s}
-.safe{background:linear-gradient(90deg,var(--secondary),var(--primary))}
+.safe{background:linear-gradient(90deg,var(--matcha),var(--strawberry))}
 .warn{background:var(--warning)}
 .danger{background:var(--danger)}
 table{width:100%;font-size:13px;border-collapse:collapse}
 th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 .pill{font-size:11px;padding:2px 6px;border-radius:999px;color:white}
-.fixed{background:var(--secondary)}
-.variable{background:var(--primary)}
+.fixed{background:var(--matcha)}
+.variable{background:var(--strawberry)}
 .saved{background:#6a5acd}
+.locked{opacity:.6}
+.remaining-box{background:var(--strawberry);color:white;padding:10px;border-radius:12px;margin-top:8px;font-weight:600}
+.chart-line{height:120px;display:flex;align-items:flex-end;gap:4px;margin-top:8px}
+.point{flex:1;border-radius:6px 6px 0 0}
+.spent{background:var(--strawberry)}
+.savedLine{background:var(--matcha)}
 .hidden{display:none}
-.chart{height:160px;display:flex;align-items:flex-end;gap:6px;margin-top:10px}
-.bar{flex:1;border-radius:6px 6px 0 0}
-.bar.fixed{background:var(--secondary)}
-.bar.variable{background:var(--primary)}
-.bar.saved{background:#6a5acd}
 </style>
 </head>
 <body>
@@ -58,12 +59,13 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
     <label>Monthly income</label><input id="income" type="number">
     <label>Budget cap</label><input id="budget" type="number">
 
-    <strong>Savings goal (overall)</strong>
+    <label>Lifetime savings goal</label>
+    <input id="savingsGoal" type="number" placeholder="Total target">
     <div class="progress"><div id="savingsBar" class="progress-bar safe"></div></div>
-    <p><span id="savedTotal">0</span> saved</p>
+    <small><span id="savingsPct">0%</span> of goal reached</small>
 
     <div class="progress"><div id="spendBar" class="progress-bar safe"></div></div>
-    <p><strong>Remaining:</strong> <span id="remaining">0</span></p>
+    <div class="remaining-box">Remaining this month: <span id="remaining">0</span></div>
 
     <button class="dark" onclick="manualSync()">Manual sync month → CSV</button>
   </div>
@@ -78,84 +80,102 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
       <option value="variable">Variable</option>
       <option value="saved">Saved</option>
     </select>
+    <label>Category</label>
+    <select id="expenseCategory">
+      <option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option>
+    </select>
     <button onclick="addExpense()">Add</button>
-    <table><thead><tr><th>Name</th><th>Type</th><th>Amt</th><th></th></tr></thead><tbody id="expenseTable"></tbody></table>
+
+    <table><thead><tr><th>Name</th><th>Type</th><th>Cat</th><th>Amt</th><th></th></tr></thead><tbody id="expenseTable"></tbody></table>
   </div>
 
   <!-- YEAR -->
   <div id="yearView" class="hidden">
-    <strong>Yearly overview</strong>
-    <div id="yearSummary"></div>
+    <strong>Monthly trend (spent vs saved)</strong>
+    <div class="chart-line" id="trendChart"></div>
   </div>
 </div>
 
 <div class="card">
-  <strong>Monthly breakdown</strong>
-  <div class="chart" id="chart"></div>
+  <strong>Monthly summary</strong>
+  <p>Fixed: <span id="sumFixed">0</span></p>
+  <p>Variable: <span id="sumVariable">0</span></p>
+  <p>Saved: <span id="sumSaved">0</span></p>
+  <p>Total spent: <span id="sumTotal">0</span></p>
 </div>
 </div>
 
 <script>
-const store=JSON.parse(localStorage.getItem('expense-tracker'))||{};
+const store=JSON.parse(localStorage.getItem('expense-tracker'))||{savingsGoal:0};
 let currentMonth=new Date().toISOString().slice(0,7);
-const year=currentMonth.slice(0,4);
 
 function monthData(m){
   if(!store[m]){
     const prev=m.replace(/-(\d+)$/,(_,n)=>`-${String(+n-1).padStart(2,'0')}`);
     const fixed=store[prev]?.expenses?.filter(e=>e.type==='fixed')||[];
-    store[m]={income:0,budget:0,expenses:fixed.map(e=>({...e}))};
+    store[m]={income:0,budget:0,expenses:fixed.map(e=>({...e,locked:true}))};
   }
   return store[m];
 }
 
 function save(){localStorage.setItem('expense-tracker',JSON.stringify(store))}
 
-function renderTabs(){monthTabs.innerHTML='';Object.keys(store).sort().forEach(m=>{const t=document.createElement('div');t.className='tab'+(m===currentMonth?' active':'');t.textContent=m;t.onclick=()=>{currentMonth=m;render()};monthTabs.appendChild(t)})}
+function renderTabs(){monthTabs.innerHTML='';Object.keys(store).filter(k=>k.includes('-')).sort().forEach(m=>{const t=document.createElement('div');t.className='tab'+(m===currentMonth?' active':'');t.textContent=m;t.onclick=()=>{currentMonth=m;render()};monthTabs.appendChild(t)})}
 
 function switchView(v){['tracker','expenses','year'].forEach(x=>document.getElementById(x+'View').classList.toggle('hidden',x!==v));document.querySelectorAll('.card .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.card .tab')[v==='tracker'?0:v==='expenses'?1:2].classList.add('active')}
 
 function render(){
   const d=monthData(currentMonth);
-  income.value=d.income||'';budget.value=d.budget||'';
+  income.value=d.income||'';budget.value=d.budget||'';savingsGoal.value=store.savingsGoal||'';
   expenseTable.innerHTML='';
 
-  let spent=0,fixed=0,variable=0,saved=0;
-  Object.entries(store).forEach(([m,v])=>v.expenses?.forEach(e=>{if(e.type==='saved')saved+=e.amount}));
+  let spent=0,fixed=0,variable=0,savedMonth=0,savedTotal=0;
+  Object.values(store).forEach(v=>v.expenses?.forEach(e=>{if(e.type==='saved')savedTotal+=e.amount}));
 
   d.expenses.forEach((e,i)=>{
-    if(e.type!=='saved')spent+=e.amount;
-    if(e.type==='fixed')fixed+=e.amount;
-    if(e.type==='variable')variable+=e.amount;
-    expenseTable.innerHTML+=`<tr><td><input value="${e.name}" onchange="edit(${i},'name',this.value)"></td><td><span class="pill ${e.type}">${e.type}</span></td><td><input type="number" value="${e.amount}" onchange="edit(${i},'amount',this.value)"></td><td><button class="small" onclick="del(${i})">✕</button></td></tr>`;
+    if(e.type==='saved'){savedMonth+=e.amount}else{spent+=e.amount}
+    if(e.type==='fixed')fixed+=e.amount;if(e.type==='variable')variable+=e.amount;
+    expenseTable.innerHTML+=`<tr class="${e.locked?'locked':''}">
+      <td><input ${e.locked?'disabled':''} value="${e.name}" onchange="edit(${i},'name',this.value)"></td>
+      <td><span class="pill ${e.type}">${e.type}</span></td>
+      <td>${e.category||''}</td>
+      <td><input ${e.locked?'disabled':''} type="number" value="${e.amount}" onchange="edit(${i},'amount',this.value)"></td>
+      <td>${e.locked?'🔒':`<button class="small" onclick="del(${i})">✕</button>`}</td>
+    </tr>`;
   });
+
+  sumFixed.textContent=fixed.toFixed(2);
+  sumVariable.textContent=variable.toFixed(2);
+  sumSaved.textContent=savedMonth.toFixed(2);
+  sumTotal.textContent=spent.toFixed(2);
 
   const cap=d.budget||d.income;
   const pct=cap?spent/cap:0;
   spendBar.style.width=Math.min(100,pct*100)+'%';
   spendBar.className='progress-bar '+(pct>=1?'danger':pct>=.8?'warn':'safe');
 
-  savingsBar.style.width=Math.min(100,(saved/ (store.savingsGoal||saved||1))*100)+'%';
-  savedTotal.textContent=saved.toFixed(2);
+  const sGoal=store.savingsGoal||1;
+  const sPct=Math.min(100,(savedTotal/sGoal)*100);
+  savingsBar.style.width=sPct+'%';
+  savingsPct.textContent=sPct.toFixed(0)+'%';
 
   remaining.textContent=(d.income-spent).toFixed(2);
 
-  renderChart(fixed,variable,saved);
-  renderYear();save();renderTabs();
+  renderTrend();save();renderTabs();
 }
 
-function renderChart(f,v,s){chart.innerHTML='';const max=Math.max(f,v,s)||1;[['fixed',f],['variable',v],['saved',s]].forEach(([t,val])=>{const b=document.createElement('div');b.className='bar '+t;b.style.height=(val/max*100)+'%';chart.appendChild(b)})}
-
-function renderYear(){yearSummary.innerHTML='';let ySpent=0,ySaved=0;Object.entries(store).forEach(([m,v])=>{if(m.startsWith(year)){v.expenses?.forEach(e=>{e.type==='saved'?ySaved+=e.amount:ySpent+=e.amount})}});yearSummary.innerHTML=`<p>Spent: ${ySpent.toFixed(2)}</p><p>Saved: ${ySaved.toFixed(2)}</p>`}
+function renderTrend(){trendChart.innerHTML='';const months=Object.keys(store).filter(k=>k.includes('-')).sort();const max=Math.max(...months.map(m=>{let s=0;store[m].expenses?.forEach(e=>{s+=e.amount});return s}),1);
+months.forEach(m=>{let spent=0,saved=0;store[m].expenses?.forEach(e=>{e.type==='saved'?saved+=e.amount:spent+=e.amount});const p1=document.createElement('div');p1.className='point spent';p1.style.height=(spent/max*100)+'%';const p2=document.createElement('div');p2.className='point savedLine';p2.style.height=(saved/max*100)+'%';trendChart.appendChild(p1);trendChart.appendChild(p2)})}
 
 income.oninput=()=>{monthData(currentMonth).income=+income.value;render()}
 budget.oninput=()=>{monthData(currentMonth).budget=+budget.value;render()}
+savingsGoal.oninput=()=>{store.savingsGoal=+savingsGoal.value;render()}
 
-function addExpense(){if(!expenseName.value||!expenseAmount.value)return;monthData(currentMonth).expenses.push({name:expenseName.value,amount:+expenseAmount.value,type:expenseType.value});expenseName.value='';expenseAmount.value='';render()}
+function addExpense(){if(!expenseName.value||!expenseAmount.value)return;monthData(currentMonth).expenses.push({name:expenseName.value,amount:+expenseAmount.value,type:expenseType.value,category:expenseCategory.value});expenseName.value='';expenseAmount.value='';render()}
 function edit(i,k,v){monthData(currentMonth).expenses[i][k]=k==='amount'?+v:v;render()}
 function del(i){monthData(currentMonth).expenses.splice(i,1);render()}
 
-function manualSync(){const d=monthData(currentMonth);let csv='Month,Income,Budget,Expense,Type,Amount\n';d.expenses.forEach(e=>csv+=`${currentMonth},${d.income},${d.budget},${e.name},${e.type},${e.amount}\n`);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`expenses-${currentMonth}.csv`;a.click()}
+function manualSync(){const d=monthData(currentMonth);let csv='Month,Income,Budget,Expense,Type,Category,Amount\n';d.expenses.forEach(e=>csv+=`${currentMonth},${d.income},${d.budget},${e.name},${e.type},${e.category||''},${e.amount}\n`);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`expenses-${currentMonth}.csv`;a.click()}
 
 render();
 </script>
