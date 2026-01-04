@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense Tracker Widget</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #ffffff;
+      padding: 16px;
+      max-width: 420px;
+      margin: auto;
+    }
+    h2 { margin-bottom: 8px; }
+    label { font-size: 14px; }
+    input {
+      width: 100%;
+      padding: 6px;
+      margin: 4px 0 10px;
+    }
+    button {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      background: #111;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    .progress {
+      background: #eee;
+      border-radius: 8px;
+      overflow: hidden;
+      height: 16px;
+      margin: 10px 0;
+    }
+    .progress-bar {
+      height: 100%;
+      background: #4caf50;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    table {
+      width: 100%;
+      font-size: 13px;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid #ddd;
+      padding: 6px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h2>Monthly Expense Tracker</h2>
+
+  <label>Monthly Income</label>
+  <input id="income" type="number" placeholder="e.g. 2500" />
+
+  <label>Add Expense (Bills or Sudden)</label>
+  <input id="expenseName" placeholder="Expense name" />
+  <input id="expenseAmount" type="number" placeholder="Amount" />
+  <button onclick="addExpense()">Add Expense</button>
+
+  <div class="progress">
+    <div id="progressBar" class="progress-bar"></div>
+  </div>
+
+  <p><strong>Remaining:</strong> <span id="remaining">0</span></p>
+
+  <table>
+    <thead>
+      <tr><th>Expense</th><th>Amount</th></tr>
+    </thead>
+    <tbody id="expenseTable"></tbody>
+  </table>
+
+<script>
+  const monthKey = new Date().toISOString().slice(0,7);
+  const data = JSON.parse(localStorage.getItem(monthKey)) || { income: 0, expenses: [] };
+
+  const incomeInput = document.getElementById('income');
+  const table = document.getElementById('expenseTable');
+  const remainingEl = document.getElementById('remaining');
+  const progressBar = document.getElementById('progressBar');
+
+  incomeInput.value = data.income;
+
+  function render() {
+    table.innerHTML = '';
+    let spent = 0;
+    data.expenses.forEach(e => {
+      spent += e.amount;
+      table.innerHTML += `<tr><td>${e.name}</td><td>${e.amount}</td></tr>`;
+    });
+
+    const remaining = data.income - spent;
+    remainingEl.textContent = remaining.toFixed(2);
+
+    const percent = data.income ? Math.min(100, (spent / data.income) * 100) : 0;
+    progressBar.style.width = percent + '%';
+
+    localStorage.setItem(monthKey, JSON.stringify(data));
+  }
+
+  incomeInput.addEventListener('input', () => {
+    data.income = Number(incomeInput.value);
+    render();
+  });
+
+  function addExpense() {
+    const name = document.getElementById('expenseName').value;
+    const amount = Number(document.getElementById('expenseAmount').value);
+    if (!name || !amount) return;
+    data.expenses.push({ name, amount });
+    document.getElementById('expenseName').value = '';
+    document.getElementById('expenseAmount').value = '';
+    render();
+  }
+
+  render();
+</script>
+</body>
+</html>
