@@ -5,112 +5,130 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Notion Expense Tracker</title>
 <style>
-:root {
-  /* Strawberry Matcha palette */
+:root{
   --bg:#fff7f9;
   --card:#ffffff;
-  --primary:#f28cab;   /* strawberry */
-  --secondary:#7fbf9b; /* matcha */
+  --primary:#f28cab;
+  --secondary:#7fbf9b;
   --warning:#ffb703;
   --danger:#ef476f;
   --text:#2f2f2f;
-  --muted:#888;
+  --muted:#777;
 }
+*{box-sizing:border-box}
 body{
   font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
   background:var(--bg);
   padding:16px;
-  max-width:560px;
+  max-width:900px;
   margin:auto;
   color:var(--text);
 }
-h2{margin-bottom:6px}
+h2{margin-bottom:8px}
 .card{
   background:var(--card);
-  border-radius:14px;
-  padding:14px;
+  border-radius:16px;
+  padding:16px;
   box-shadow:0 6px 18px rgba(0,0,0,.06);
-  margin-bottom:14px;
 }
-label{font-size:13px;color:var(--muted)}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
 input,select{
-  width:100%;padding:7px;margin:4px 0 10px;
-  border-radius:8px;border:1px solid #ddd;
+  width:100%;padding:8px;border-radius:10px;border:1px solid #ddd;margin-bottom:12px
 }
 button{
-  padding:8px 10px;border:none;border-radius:10px;
+  padding:8px 12px;border:none;border-radius:10px;
   background:var(--primary);color:white;font-weight:600;cursor:pointer
 }
-button.small{font-size:12px;padding:4px 6px}
-.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px}
-.tab{padding:6px 10px;border-radius:999px;background:#eee;font-size:13px;cursor:pointer}
+button.secondary{background:var(--secondary)}
+button.dark{background:#222}
+button.small{font-size:12px;padding:4px 8px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+.tab{padding:6px 12px;border-radius:999px;background:#eee;font-size:13px;cursor:pointer;white-space:nowrap}
 .tab.active{background:var(--secondary);color:white}
+.layout{display:grid;grid-template-columns:2fr 1fr;gap:14px}
 .progress{background:#eee;border-radius:999px;overflow:hidden;height:14px;margin:10px 0}
 .progress-bar{height:100%;width:0%;transition:.3s}
 .progress-bar.safe{background:linear-gradient(90deg,var(--secondary),var(--primary))}
 .progress-bar.warn{background:var(--warning)}
 .progress-bar.danger{background:var(--danger)}
 table{width:100%;font-size:13px;border-collapse:collapse}
-th,td{border-bottom:1px solid #eee;padding:6px;text-align:left}
+th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 .pill{font-size:11px;padding:2px 6px;border-radius:999px;color:white}
 .fixed{background:var(--secondary)}
 .variable{background:var(--primary)}
-.row{display:flex;gap:8px}
-.row>*{flex:1}
-.summary{display:flex;justify-content:space-between;font-size:13px;margin-top:6px}
-.export{background:#222;width:100%;margin-top:6px}
+.summary-row{display:flex;justify-content:space-between;font-size:13px;margin:6px 0}
+.hidden{display:none}
 </style>
 </head>
 <body>
 <h2>Expense Tracker</h2>
 <div class="tabs" id="monthTabs"></div>
 
+<div class="layout">
+
+<!-- MAIN TRACKER -->
 <div class="card">
-  <label>Monthly Income</label>
-  <input id="income" type="number" />
-
-  <label>Budget cap (warning at 80%, red at 100%)</label>
-  <input id="budget" type="number" placeholder="Optional" />
-
-  <div class="row">
-    <input id="expenseName" placeholder="Expense name" />
-    <input id="expenseAmount" type="number" placeholder="Amount" />
+  <div class="tabs">
+    <div class="tab active" onclick="switchView('tracker')">Tracker</div>
+    <div class="tab" onclick="switchView('expenses')">Expenses</div>
   </div>
-  <div class="row">
+
+  <!-- TRACKER VIEW -->
+  <div id="trackerView">
+    <label>Monthly income</label>
+    <input id="income" type="number">
+
+    <label>Budget cap</label>
+    <input id="budget" type="number" placeholder="Optional">
+
+    <label>Savings goal</label>
+    <input id="savings" type="number" placeholder="Amount to save">
+
+    <div class="progress"><div id="progressBar" class="progress-bar safe"></div></div>
+    <p><strong>Remaining after savings:</strong> <span id="remaining">0</span></p>
+
+    <button class="dark" onclick="manualSync()">Manual sync month → CSV</button>
+  </div>
+
+  <!-- EXPENSES VIEW -->
+  <div id="expensesView" class="hidden">
+    <label>Expense name</label>
+    <input id="expenseName">
+
+    <label>Amount</label>
+    <input id="expenseAmount" type="number">
+
+    <label>Type</label>
     <select id="expenseType">
       <option value="fixed">Fixed</option>
       <option value="variable">Variable</option>
     </select>
-    <button onclick="addExpense()">Add</button>
+
+    <button onclick="addExpense()">Add expense</button>
+
+    <table>
+      <thead><tr><th>Name</th><th>Type</th><th>Amount</th><th></th></tr></thead>
+      <tbody id="expenseTable"></tbody>
+    </table>
   </div>
-
-  <div class="progress"><div id="progressBar" class="progress-bar safe"></div></div>
-  <p><strong>Remaining:</strong> <span id="remaining">0</span></p>
 </div>
 
-<div class="card">
-  <table>
-    <thead><tr><th>Expense</th><th>Type</th><th>Amount</th><th></th></tr></thead>
-    <tbody id="expenseTable"></tbody>
-  </table>
-</div>
-
+<!-- SUMMARY -->
 <div class="card">
   <strong>Monthly summary</strong>
-  <div class="summary"><span>Fixed</span><span id="sumFixed">0</span></div>
-  <div class="summary"><span>Variable</span><span id="sumVariable">0</span></div>
-  <div class="summary"><span>Total spent</span><span id="sumTotal">0</span></div>
+  <div class="summary-row"><span>Fixed</span><span id="sumFixed">0</span></div>
+  <div class="summary-row"><span>Variable</span><span id="sumVariable">0</span></div>
+  <div class="summary-row"><span>Total spent</span><span id="sumTotal">0</span></div>
+  <div class="summary-row"><span>Savings goal</span><span id="sumSavings">0</span></div>
 </div>
 
-<div class="card">
-  <button class="export" onclick="exportCSV()">Export Month → CSV (Notion / Sheets)</button>
 </div>
 
 <script>
-const store = JSON.parse(localStorage.getItem('expense-tracker')) || {};
-const tabs = document.getElementById('monthTabs');
-let currentMonth = new Date().toISOString().slice(0,7);
-if(!store[currentMonth]) store[currentMonth]={income:0,budget:0,expenses:[]};
+const store=JSON.parse(localStorage.getItem('expense-tracker'))||{};
+const tabs=document.getElementById('monthTabs');
+let currentMonth=new Date().toISOString().slice(0,7);
+if(!store[currentMonth])store[currentMonth]={income:0,budget:0,savings:0,expenses:[]};
 
 function save(){localStorage.setItem('expense-tracker',JSON.stringify(store))}
 
@@ -125,13 +143,21 @@ function renderTabs(){
   })
 }
 
+function switchView(v){
+  document.getElementById('trackerView').classList.toggle('hidden',v!=='tracker');
+  document.getElementById('expensesView').classList.toggle('hidden',v!=='expenses');
+  document.querySelectorAll('.card .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.card .tab')[v==='tracker'?0:1].classList.add('active');
+}
+
 function render(){
   const d=store[currentMonth];
   income.value=d.income||'';
   budget.value=d.budget||'';
+  savings.value=d.savings||'';
   expenseTable.innerHTML='';
-  let spent=0,fixed=0,variable=0;
 
+  let spent=0,fixed=0,variable=0;
   d.expenses.forEach((e,i)=>{
     spent+=e.amount;
     e.type==='fixed'?fixed+=e.amount:variable+=e.amount;
@@ -146,8 +172,9 @@ function render(){
   sumFixed.textContent=fixed.toFixed(2);
   sumVariable.textContent=variable.toFixed(2);
   sumTotal.textContent=spent.toFixed(2);
+  sumSavings.textContent=d.savings.toFixed(2);
 
-  const remaining=d.income-spent;
+  const remaining=d.income-spent-d.savings;
   remainingEl.textContent=remaining.toFixed(2);
 
   const cap=d.budget||d.income;
@@ -160,24 +187,20 @@ function render(){
 
 income.oninput=()=>{store[currentMonth].income=+income.value;render()}
 budget.oninput=()=>{store[currentMonth].budget=+budget.value;render()}
+savings.oninput=()=>{store[currentMonth].savings=+savings.value;render()}
 
 function addExpense(){
   if(!expenseName.value||!expenseAmount.value)return;
-  store[currentMonth].expenses.push({
-    name:expenseName.value,
-    amount:+expenseAmount.value,
-    type:expenseType.value
-  });
+  store[currentMonth].expenses.push({name:expenseName.value,amount:+expenseAmount.value,type:expenseType.value});
   expenseName.value='';expenseAmount.value='';render();
 }
-
 function edit(i,k,v){store[currentMonth].expenses[i][k]=k==='amount'?+v:v;render()}
 function del(i){store[currentMonth].expenses.splice(i,1);render()}
 
-function exportCSV(){
+function manualSync(){
   const d=store[currentMonth];
-  let csv='Month,Income,Budget,Expense,Type,Amount\n';
-  d.expenses.forEach(e=>csv+=`${currentMonth},${d.income},${d.budget},${e.name},${e.type},${e.amount}\n`);
+  let csv='Month,Income,Budget,Savings,Expense,Type,Amount\n';
+  d.expenses.forEach(e=>csv+=`${currentMonth},${d.income},${d.budget},${d.savings},${e.name},${e.type},${e.amount}\n`);
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`expenses-${currentMonth}.csv`;a.click();
