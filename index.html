@@ -35,10 +35,10 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 .saved{background:#6a5acd}
 .locked{opacity:.6}
 .remaining-box{background:var(--strawberry);color:white;padding:10px;border-radius:12px;margin-top:8px;font-weight:600}
-.chart-line{height:120px;display:flex;align-items:flex-end;gap:4px;margin-top:8px}
-.point{flex:1;border-radius:6px 6px 0 0}
-.spent{background:var(--strawberry)}
-.savedLine{background:var(--matcha)}
+.pie{width:160px;height:160px;border-radius:50%;margin:12px auto}
+.legend{font-size:12px}
+.legend div{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.legend span{width:10px;height:10px;border-radius:50%}
 .hidden{display:none}
 </style>
 </head>
@@ -51,7 +51,6 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
   <div class="tabs">
     <div class="tab active" onclick="switchView('tracker')">Tracker</div>
     <div class="tab" onclick="switchView('expenses')">Expenses</div>
-    <div class="tab" onclick="switchView('year')">Year</div>
   </div>
 
   <!-- TRACKER -->
@@ -65,7 +64,6 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
     <small><span id="savingsPct">0%</span> of goal reached</small>
 
     <div class="progress"><div id="spendBar" class="progress-bar safe"></div></div>
-    <div class="remaining-box">Remaining this month: <span id="remaining">0</span></div>
 
     <button class="dark" onclick="manualSync()">Manual sync month → CSV</button>
   </div>
@@ -82,31 +80,34 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
     </select>
     <label>Category</label>
     <select id="expenseCategory">
-      <option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option>
+      <option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option><option>Bills</option>
     </select>
     <button onclick="addExpense()">Add</button>
 
     <table><thead><tr><th>Name</th><th>Type</th><th>Cat</th><th>Amt</th><th></th></tr></thead><tbody id="expenseTable"></tbody></table>
   </div>
-
-  <!-- YEAR -->
-  <div id="yearView" class="hidden">
-    <strong>Monthly trend (spent vs saved)</strong>
-    <div class="chart-line" id="trendChart"></div>
-  </div>
 </div>
 
 <div class="card">
   <strong>Monthly summary</strong>
+  <p>Remaining this month</p>
+  <div class="remaining-box"><span id="remaining">0</span></div>
   <p>Fixed: <span id="sumFixed">0</span></p>
   <p>Variable: <span id="sumVariable">0</span></p>
   <p>Saved: <span id="sumSaved">0</span></p>
   <p>Total spent: <span id="sumTotal">0</span></p>
+
+  <hr>
+  <strong>Category budgets</strong>
+  <div id="categoryBudgets"></div>
+
+  <div id="pieChart" class="pie"></div>
+  <div id="pieLegend" class="legend"></div>
 </div>
 </div>
 
 <script>
-const store=JSON.parse(localStorage.getItem('expense-tracker'))||{savingsGoal:0};
+const store=JSON.parse(localStorage.getItem('expense-tracker'))||{savingsGoal:0,categoryBudgets:{Rent:0,Food:0,Fun:0,Travel:0,Bills:0}};
 let currentMonth=new Date().toISOString().slice(0,7);
 
 function monthData(m){
@@ -122,7 +123,7 @@ function save(){localStorage.setItem('expense-tracker',JSON.stringify(store))}
 
 function renderTabs(){monthTabs.innerHTML='';Object.keys(store).filter(k=>k.includes('-')).sort().forEach(m=>{const t=document.createElement('div');t.className='tab'+(m===currentMonth?' active':'');t.textContent=m;t.onclick=()=>{currentMonth=m;render()};monthTabs.appendChild(t)})}
 
-function switchView(v){['tracker','expenses','year'].forEach(x=>document.getElementById(x+'View').classList.toggle('hidden',x!==v));document.querySelectorAll('.card .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.card .tab')[v==='tracker'?0:v==='expenses'?1:2].classList.add('active')}
+function switchView(v){['tracker','expenses'].forEach(x=>document.getElementById(x+'View').classList.toggle('hidden',x!==v));document.querySelectorAll('.card .tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.card .tab')[v==='tracker'?0:1].classList.add('active')}
 
 function render(){
   const d=monthData(currentMonth);
@@ -130,11 +131,13 @@ function render(){
   expenseTable.innerHTML='';
 
   let spent=0,fixed=0,variable=0,savedMonth=0,savedTotal=0;
+  const catTotals={};
   Object.values(store).forEach(v=>v.expenses?.forEach(e=>{if(e.type==='saved')savedTotal+=e.amount}));
 
   d.expenses.forEach((e,i)=>{
     if(e.type==='saved'){savedMonth+=e.amount}else{spent+=e.amount}
     if(e.type==='fixed')fixed+=e.amount;if(e.type==='variable')variable+=e.amount;
+    catTotals[e.category]=(catTotals[e.category]||0)+e.amount;
     expenseTable.innerHTML+=`<tr class="${e.locked?'locked':''}">
       <td><input ${e.locked?'disabled':''} value="${e.name}" onchange="edit(${i},'name',this.value)"></td>
       <td><span class="pill ${e.type}">${e.type}</span></td>
@@ -161,15 +164,37 @@ function render(){
 
   remaining.textContent=(d.income-spent).toFixed(2);
 
-  renderTrend();save();renderTabs();
+  renderCategoryBudgets(catTotals);
+  renderPie(catTotals);
+
+  save();renderTabs();
 }
 
-function renderTrend(){trendChart.innerHTML='';const months=Object.keys(store).filter(k=>k.includes('-')).sort();const max=Math.max(...months.map(m=>{let s=0;store[m].expenses?.forEach(e=>{s+=e.amount});return s}),1);
-months.forEach(m=>{let spent=0,saved=0;store[m].expenses?.forEach(e=>{e.type==='saved'?saved+=e.amount:spent+=e.amount});const p1=document.createElement('div');p1.className='point spent';p1.style.height=(spent/max*100)+'%';const p2=document.createElement('div');p2.className='point savedLine';p2.style.height=(saved/max*100)+'%';trendChart.appendChild(p1);trendChart.appendChild(p2)})}
+function renderCategoryBudgets(catTotals){
+  categoryBudgets.innerHTML='';
+  Object.keys(store.categoryBudgets).forEach(cat=>{
+    const spent=catTotals[cat]||0;
+    const cap=store.categoryBudgets[cat]||0;
+    categoryBudgets.innerHTML+=`<label>${cat} budget</label><input type="number" value="${cap}" onchange="setCatBudget('${cat}',this.value)"><small>${spent.toFixed(2)} spent</small>`;
+  });
+}
+
+function renderPie(catTotals){
+  const total=Object.values(catTotals).reduce((a,b)=>a+b,0)||1;
+  let angle=0;let gradients=[];pieLegend.innerHTML='';
+  const colors=['#f28cab','#7fbf9b','#ffb703','#6a5acd','#ef476f'];
+  Object.entries(catTotals).forEach(([cat,val],i)=>{
+    const a=val/total*360;gradients.push(`${colors[i%colors.length]} ${angle}deg ${angle+a}deg`);
+    angle+=a;pieLegend.innerHTML+=`<div><span style="background:${colors[i%colors.length]}"></span>${cat}</div>`;
+  });
+  pieChart.style.background=`conic-gradient(${gradients.join(',')})`;
+}
 
 income.oninput=()=>{monthData(currentMonth).income=+income.value;render()}
 budget.oninput=()=>{monthData(currentMonth).budget=+budget.value;render()}
 savingsGoal.oninput=()=>{store.savingsGoal=+savingsGoal.value;render()}
+
+function setCatBudget(cat,v){store.categoryBudgets[cat]=+v;render()}
 
 function addExpense(){if(!expenseName.value||!expenseAmount.value)return;monthData(currentMonth).expenses.push({name:expenseName.value,amount:+expenseAmount.value,type:expenseType.value,category:expenseCategory.value});expenseName.value='';expenseAmount.value='';render()}
 function edit(i,k,v){monthData(currentMonth).expenses[i][k]=k==='amount'?+v:v;render()}
