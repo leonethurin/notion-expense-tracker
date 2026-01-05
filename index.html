@@ -61,7 +61,7 @@ body {
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.04);
-  height: 560px; /* Lite högre för att få plats med nya fält */
+  height: 580px; /* Lite högre för att rymma allt */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -418,18 +418,18 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
                     <input id="income" type="number" onchange="debouncedSave()" placeholder="e.g. 25000" />
                 </div>
                 <div>
-                    <label>Monthly Budget (Spending Limit)</label>
-                    <input id="monthlyBudget" type="number" onchange="debouncedSave()" placeholder="e.g. 15000" />
+                    <label>Monthly Budget (Limit)</label>
+                    <input id="monthlyBudget" type="number" onchange="debouncedSave()" placeholder="Max spending" />
                 </div>
             </div>
             <div class="grid-2" style="margin-top:16px;">
                  <div>
                     <label>Monthly Savings Goal</label>
-                    <input id="monthlySavingsGoal" type="number" onchange="debouncedSave()" placeholder="e.g. 5000" />
+                    <input id="monthlySavingsGoal" type="number" onchange="debouncedSave()" placeholder="e.g. 2000" />
                 </div>
                 <div>
                     <label>Longterm Savings Goal</label>
-                    <input id="longtermSavingsGoal" type="number" onchange="debouncedSave()" placeholder="Total target" />
+                    <input id="longtermSavingsGoal" type="number" onchange="debouncedSave()" placeholder="Total Target" />
                 </div>
             </div>
 
@@ -836,7 +836,6 @@ function render(){
   document.getElementById('incomeBar').style.width = incomePct + "%";
   document.getElementById('incomeUsageText').textContent = incomePct.toFixed(0) + "% used";
 
-  // Longterm Goal Logic (Saved / Longterm Goal)
   const goalPct = m.longtermSavingsGoal ? Math.min((totalSaved / m.longtermSavingsGoal) * 100, 100) : 0;
   document.getElementById('saveBar').style.width = goalPct + "%";
   document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
@@ -874,7 +873,7 @@ function render(){
 }
 
 function drawCharts(m){
-  // 1. PIE CHART (Kategorier) - Oförändrad
+  // 1. PIE CHART
   const cats = {};
   m.expenses.filter(e => e.category !== "Saved").forEach(e => {
       cats[e.category] = (cats[e.category] || 0) + e.amount;
@@ -903,46 +902,37 @@ function drawCharts(m){
       }
   });
 
-  // 2. LINE CHART (Fixad logik: En punkt per dag)
+  // 2. LINE CHART (FIXED: Daily Cumulative)
   const lineCtx = document.getElementById('lineChart').getContext('2d');
   if(lineChartInstance) lineChartInstance.destroy();
 
-  // Räkna ut hur många dagar månaden har
   const year = parseInt(currentMonth.split('-')[0]);
   const month = parseInt(currentMonth.split('-')[1]);
   const daysInMonth = new Date(year, month, 0).getDate();
   
-  // Skapa en lista med alla dagar (1, 2, 3... 31)
   const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
-
-  // Skapa data-arrayer fyllda med nollor
   const dailyExpenses = new Array(daysInMonth).fill(0);
   const dailySavings = new Array(daysInMonth).fill(0);
 
-  // Sortera transaktioner
   const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
 
-  // Loopa igenom varje dag i månaden för att bygga kumulativ data
   let cumExp = 0;
   let cumSave = 0;
 
+  // Build daily data points (holding previous value if no expenses that day)
   for (let day = 1; day <= daysInMonth; day++) {
-      // Hitta transaktioner för just denna dag
       const dayStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
       
-      // Lägg till dagens utgifter till totalen
       const todaysItems = sortedExp.filter(e => e.date === dayStr);
       todaysItems.forEach(e => {
           if(e.category === "Saved") cumSave += e.amount;
           else cumExp += e.amount;
       });
 
-      // Spara dagens totala ställning (kumulativt)
       dailyExpenses[day - 1] = cumExp;
       dailySavings[day - 1] = cumSave;
   }
 
-  // Rita grafen
   lineChartInstance = new Chart(lineCtx, {
       type: "line",
       data: {
@@ -954,13 +944,13 @@ function drawCharts(m){
               borderColor: "#f48fb1", 
               backgroundColor: "rgba(244, 143, 177, 0.1)",
               borderWidth: 2,
-              pointRadius: 1, // Små punkter för renare look
-              tension: 0.1,   // Lite rakare linjer
+              pointRadius: 1, 
+              tension: 0.1,
               fill: true
             },
             {
               label: "Budget Limit",
-              data: labels.map(() => m.monthlyBudget), // Rak linje
+              data: labels.map(() => m.monthlyBudget), 
               borderColor: "#f48fb1",
               borderDash: [5, 5],
               borderWidth: 1.5,
@@ -979,7 +969,7 @@ function drawCharts(m){
             },
             {
               label: "Savings Goal",
-              data: labels.map(() => m.monthlySavingsGoal), // Rak linje
+              data: labels.map(() => m.monthlySavingsGoal), 
               borderColor: "#669e7c", 
               borderDash: [5, 5],
               borderWidth: 1.5,
@@ -991,111 +981,12 @@ function drawCharts(m){
       options: { 
           responsive: true, 
           maintainAspectRatio: false,
-          interaction: {
-              mode: 'index',
-              intersect: false,
-          },
+          interaction: { mode: 'index', intersect: false },
           scales: { 
               y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: {size: 10} } },
-              x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } // Visa inte alla 31 dagar, det blir grötigt
+              x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } 
           },
-          plugins: { 
-              legend: { display: false },
-              tooltip: {
-                  callbacks: {
-                      label: function(context) {
-                          return context.dataset.label + ": " + context.raw + " " + settings.currency;
-                      }
-                  }
-              }
-          } 
-      }
-  });
-}
-
-  // Line Chart Logic
-  // We need to plot two lines: Cumulative Expenses vs Monthly Budget
-  // And arguably separate: Cumulative Savings vs Monthly Savings Goal (User requested line for savings)
-  
-  const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
-  
-  // Create cumulative arrays
-  let cumExp = 0;
-  let cumSave = 0;
-  let expPoints = [];
-  let savePoints = [];
-  
-  sortedExp.forEach(e => {
-      if(e.category === "Saved") {
-          cumSave += e.amount;
-          savePoints.push({x: e.date, y: cumSave});
-      } else {
-          cumExp += e.amount;
-          expPoints.push({x: e.date, y: cumExp});
-      }
-  });
-
-  const lineCtx = document.getElementById('lineChart').getContext('2d');
-  if(lineChartInstance) lineChartInstance.destroy();
-  
-  // Generate labels (1 to 31 or based on dates)
-  // For simplicity, we stick to data points but ensure X-axis is shared
-  // We will map based on index for simplicity in this version, or dates
-  // Let's use simple index-based for visual clarity in this layout
-  const allPoints = [...expPoints, ...savePoints].sort((a,b) => new Date(a.x) - new Date(b.x));
-  const labels = allPoints.map(p => p.x.slice(8,10)); // Just the day
-
-  lineChartInstance = new Chart(lineCtx, {
-      type: "line",
-      data: {
-          labels: labels, // This is approx, strictly usually we generate 1-31
-          datasets: [
-            {
-              label: "Spending",
-              data: expPoints,
-              borderColor: "#f48fb1", // Pink
-              backgroundColor: "rgba(244, 143, 177, 0.1)",
-              borderWidth: 2,
-              tension: 0.3,
-              fill: true
-            },
-            {
-              label: "Budget Limit",
-              data: expPoints.map(() => m.monthlyBudget),
-              borderColor: "#f48fb1", // Pink dashed
-              borderDash: [5, 5],
-              borderWidth: 1,
-              pointRadius: 0,
-              fill: false
-            },
-            {
-              label: "Savings",
-              data: savePoints,
-              borderColor: "#669e7c", // Green
-              backgroundColor: "rgba(102, 158, 124, 0.1)",
-              borderWidth: 2,
-              tension: 0.3,
-              fill: true
-            },
-            {
-              label: "Savings Goal",
-              data: savePoints.map(() => m.monthlySavingsGoal),
-              borderColor: "#669e7c", // Green dashed
-              borderDash: [5, 5],
-              borderWidth: 1,
-              pointRadius: 0,
-              fill: false
-            }
-          ]
-      },
-      options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          scales: { 
-              y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: {size: 10} } },
-              x: { grid: { display: false } }
-          },
-          plugins: { legend: { display: false } } // Hide legend to keep it clean
+          plugins: { legend: { display: false } } 
       }
   });
 }
