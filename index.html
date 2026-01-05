@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Notion Budget Buddy</title>
+<title>Expense Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -10,9 +10,8 @@
 :root {
   /* STRAWBERRY MATCHA PALETTE */
   --matcha: #8fc7a4;
-  --matcha-dark: #5e9173;
+  --matcha-dark: #669e7c; /* Green for text/title */
   --matcha-light: #e8f5e9;
-  --matcha-faint: #f1f8f3;
   
   --strawberry: #f48fb1;
   --strawberry-hover: #ec7aa0;
@@ -23,7 +22,7 @@
   --text-light: #787774;
   --bg-color: #f7f6f3; 
   --card-bg: #ffffff;
-  --input-bg: #f3f4f6; /* Lighter background for inputs */
+  --input-bg: #f3f4f6; 
   --border-color: #ebebeb;
 }
 
@@ -47,23 +46,16 @@ body {
   padding: 0 20px;
 }
 
-/* --- BRAND HEADER (Outside Cards) --- */
+/* --- BRAND HEADER --- */
 .top-brand {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     font-weight: 700; 
-    color: var(--text-main);
-    font-size: 20px;
+    color: var(--matcha-dark); /* Green Title */
+    font-size: 22px;
     display: flex;
     align-items: center;
     gap: 8px;
-}
-.top-brand span {
-    background: var(--strawberry); 
-    padding: 3px 8px; 
-    border-radius: 6px; 
-    color: white; 
-    font-size: 16px;
-    font-weight: 600;
+    letter-spacing: -0.5px;
 }
 
 /* --- LAYOUT GRID --- */
@@ -74,14 +66,14 @@ body {
 }
 
 /* FIXED HEIGHT CARDS */
-/* Setting strict height and overflow hidden ensures charts don't expand the box */
+/* Reduced height to 510px (approx 2 rows shorter) */
 .main-card, .sidebar-card {
   background: var(--card-bg);
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.04);
-  height: 580px; /* Fixed Height */
+  height: 510px; 
   display: flex;
   flex-direction: column;
   position: relative;
@@ -93,8 +85,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  flex-shrink: 0; /* Don't shrink header */
+  margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 /* TABS */
@@ -107,7 +99,7 @@ body {
 }
 
 .tabs button {
-  padding: 6px 16px;
+  padding: 6px 14px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -146,13 +138,13 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Ensure content stays inside */
-    padding: 2px; /* Prevent focus ring cutoff */
+    overflow: hidden;
+    padding: 2px;
 }
 
 .hidden { display: none !important; }
 
-/* INPUTS */
+/* INPUTS (Generic) */
 label {
   display: block;
   font-size: 11px;
@@ -165,11 +157,11 @@ label {
 
 input, select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 12px; /* Slightly smaller vertical padding for compactness */
   border-radius: 8px;
-  border: 1px solid transparent; /* No border initially */
+  border: 1px solid transparent; 
   font-size: 13px;
-  background: var(--input-bg); /* Light Grey BG */
+  background: var(--input-bg); /* Default Light Grey */
   transition: all 0.2s;
   color: var(--text-main);
 }
@@ -181,13 +173,24 @@ input:focus, select:focus {
   box-shadow: 0 0 0 3px var(--strawberry-light);
 }
 
-/* ADD EXPENSE BOX */
+/* ADD EXPENSE BOX (Special Styling) */
 .add-expense-box {
-    background: var(--matcha-faint); /* Light background for section */
-    padding: 20px;
+    background: #FAFAFA; /* Specific background per request */
+    padding: 18px;
     border-radius: 12px;
-    margin-top: 20px;
-    border: 1px solid rgba(143, 199, 164, 0.2);
+    margin-top: 16px;
+    border: 1px solid #eeeeee;
+}
+
+/* Inputs inside Add Expense Box are White */
+.add-expense-box input, 
+.add-expense-box select {
+    background: #FFFFFF;
+    border: 1px solid #e0e0e0; /* Subtle border to make them pop */
+}
+.add-expense-box input:focus, 
+.add-expense-box select:focus {
+    border-color: var(--strawberry);
 }
 
 /* BUTTONS */
@@ -196,11 +199,11 @@ input:focus, select:focus {
   color: white;
   border: none;
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   font-weight: 600;
   cursor: pointer;
   width: 100%;
-  margin-top: 16px; /* Space from inputs */
+  margin-top: 14px;
   font-size: 14px;
   transition: transform 0.1s, background 0.2s;
   box-shadow: 0 4px 10px rgba(244, 143, 177, 0.3);
@@ -244,7 +247,7 @@ input:focus, select:focus {
 table { width: 100%; border-collapse: collapse; }
 
 th {
-  background: #fff; /* Keep header white/clean */
+  background: #fff;
   text-align: left;
   padding: 12px;
   font-size: 11px;
@@ -269,7 +272,7 @@ td input, td select {
     font-size: 13px;
     margin: -5px; 
     width: calc(100% + 10px);
-    background: transparent; /* Keep table inputs transparent until focused */
+    background: transparent;
     border: 1px solid transparent;
 }
 td input:hover, td select:hover { background: #f5f5f5; }
@@ -309,11 +312,10 @@ td input:focus, td select:focus {
     display: flex;
     gap: 16px;
     align-items: center;
-    overflow: hidden; /* Prevent overflow */
-    min-height: 0; /* Important for flex child scaling */
+    overflow: hidden; 
+    min-height: 0; 
 }
 
-/* Restrict chart containers so they don't blow up the flexbox */
 .chart-wrapper-pie { width: 35%; height: 100%; position: relative; }
 .chart-wrapper-line { width: 65%; height: 100%; position: relative; }
 
@@ -326,7 +328,7 @@ td input:focus, td select:focus {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
-    padding: 10px 12px;
+    padding: 8px 12px; /* Slightly tighter */
     border-radius: 10px;
     font-size: 13px;
 }
@@ -337,7 +339,7 @@ td input:focus, td select:focus {
 .summary-item span:first-child { font-weight: 500; }
 .summary-item span:last-child { font-weight: 700; font-size: 14px; }
 
-.progress-group { margin-bottom: 20px; }
+.progress-group { margin-bottom: 16px; }
 .progress-header {
     display: flex;
     justify-content: space-between;
@@ -357,17 +359,17 @@ td input:focus, td select:focus {
 .remaining-card {
     background: var(--strawberry);
     color: white;
-    padding: 20px;
+    padding: 18px;
     border-radius: 14px;
     text-align: center;
     margin-top: auto; 
     box-shadow: 0 4px 12px rgba(244, 143, 177, 0.4);
 }
 .remaining-card p { margin: 0 0 6px 0; font-size: 12px; opacity: 0.9; }
-.remaining-card strong { font-size: 28px; display: block; }
+.remaining-card strong { font-size: 26px; display: block; }
 
 .btn-export {
-    margin-top: 12px;
+    margin-top: 10px;
     width: 100%;
     background: transparent;
     border: 1px dashed #ccc;
@@ -390,8 +392,7 @@ td input:focus, td select:focus {
 <div class="app">
 
   <div class="top-brand">
-      <span>Bud</span> 
-      Buddy
+      Expense tracker 💸
   </div>
 
   <div class="container">
@@ -421,7 +422,7 @@ td input:focus, td select:focus {
             </div>
 
             <div class="add-expense-box">
-                <h3 style="margin-top:0; color: var(--text-main); margin-bottom: 16px; font-size: 15px;">Add New Expense</h3>
+                <h3 style="margin-top:0; color: var(--text-main); margin-bottom: 12px; font-size: 14px;">Add New Expense</h3>
                 <div class="grid-4">
                     <div>
                         <label>Name</label>
@@ -477,7 +478,6 @@ td input:focus, td select:focus {
         </div>
 
         <div id="charts" class="tab-content hidden">
-            
             <div class="dashboard-grid">
                 <div class="kpi-card bg-pink">
                     <h4>Income</h4>
@@ -506,7 +506,7 @@ td input:focus, td select:focus {
     </div>
 
     <div class="sidebar-card">
-        <h3 style="margin-top:0; margin-bottom:20px; font-size:16px;">Monthly Summary</h3>
+        <h3 style="margin-top:0; margin-bottom:16px; font-size:16px;">Monthly Summary</h3>
         
         <div class="sidebar-section">
             <div class="summary-item sum-green">
