@@ -91,6 +91,7 @@ body {
     align-items: center;
     gap: 6px;
     margin-right: 10px;
+    cursor: help;
 }
 .status-dot {
     width: 8px;
@@ -427,8 +428,8 @@ td input:focus, td select:focus {
             
             <div class="header-controls">
                 <div id="syncStatus">
-                    <div class="status-dot status-green" id="statusDot"></div>
-                    <span id="statusText">Ready</span>
+                    <div class="status-dot status-yellow" id="statusDot"></div>
+                    <span id="statusText">Connecting...</span>
                 </div>
 
                 <select id="currencySelect" class="header-select" onchange="changeCurrency()">
@@ -602,7 +603,7 @@ let saveTimeout;
 
 // -- SYNC FUNCTIONS --
 
-function setStatus(state) {
+function setStatus(state, msg) {
     const dot = document.getElementById('statusDot');
     const txt = document.getElementById('statusText');
     if(state === 'loading') {
@@ -613,30 +614,49 @@ function setStatus(state) {
         txt.textContent = "Synced";
     } else if (state === 'error') {
         dot.className = "status-dot status-red";
-        txt.textContent = "Error";
+        txt.textContent = msg || "Error";
     }
 }
 
 async function loadData() {
     setStatus('loading');
     try {
-        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`);
-        if(!res.ok) throw new Error("Load failed");
+        // Headers are crucial for some browsers/proxies
+        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if(!res.ok) {
+            if(res.status === 404) throw new Error("ID not found (404)");
+            throw new Error(`Load failed (${res.status})`);
+        }
+
         const json = await res.json();
         
-        // JSONBlob returns the data directly
-        fullData = json.data || {};
-        settings = json.settings || { currency: "kr" };
+        // Handle empty blob case safely
+        if(Object.keys(json).length === 0 && json.constructor === Object) {
+            fullData = {};
+            settings = { currency: "kr" };
+            // Auto-init the blob so it's not empty next time
+            saveData();
+        } else {
+            fullData = json.data || {};
+            settings = json.settings || { currency: "kr" };
+        }
         
         document.getElementById('currencySelect').value = settings.currency;
         document.getElementById('loadingOverlay').classList.add('hidden');
         setStatus('saved');
         render();
+
     } catch(e) {
         console.error(e);
-        setStatus('error');
-        // Fallback to empty if load fails
         document.getElementById('loadingOverlay').classList.add('hidden');
+        setStatus('error', e.message);
+        alert("Sync Error: " + e.message + "\nCheck console for details.");
     }
 }
 
@@ -644,17 +664,21 @@ async function saveData() {
     setStatus('loading');
     try {
         const payload = { data: fullData, settings: settings };
-        await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
+        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
             method: "PUT",
             headers: { 
                 "Content-Type": "application/json",
+                "Accept": "application/json"
             },
             body: JSON.stringify(payload)
         });
+        
+        if(!res.ok) throw new Error("Save failed " + res.status);
+        
         setStatus('saved');
     } catch(e) {
         console.error(e);
-        setStatus('error');
+        setStatus('error', "Save Error");
     }
 }
 
