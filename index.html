@@ -390,11 +390,11 @@ function render(){
 
   expenseTable.innerHTML = m.expenses.map((e,i)=>`
     <tr>
-      <td><input type="date" value="${e.date}" onchange="m.expenses[${i}].date=this.value;save();render()"></td>
-      <td><input value="${e.name}" onchange="m.expenses[${i}].name=this.value;save();render()"></td>
-      <td><input type="number" value="${e.amount}" onchange="m.expenses[${i}].amount=+this.value;save();render()"></td>
-      <td><select onchange="m.expenses[${i}].type=this.value;save();render()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
-      <td><select onchange="m.expenses[${i}].category=this.value;save();render()"><option ${e.category=="Rent"?"selected":""}>Rent</option><option ${e.category=="Food"?"selected":""}>Food</option><option ${e.category=="Fun"?"selected":""}>Fun</option><option ${e.category=="Travel"?"selected":""}>Travel</option><option ${e.category=="Saved"?"selected":""}>Saved</option></select></td>
+      <td><input type="date" value="${e.date}" onchange="m.expenses[${i}].date=this.value;save();render()" onclick="event.stopPropagation()"></td>
+      <td><input value="${e.name}" onchange="m.expenses[${i}].name=this.value;save();render()" onclick="event.stopPropagation()"></td>
+      <td><input type="number" value="${e.amount}" onchange="m.expenses[${i}].amount=+this.value;save();render()" onclick="event.stopPropagation()"></td>
+      <td><select onchange="m.expenses[${i}].type=this.value;save();render()" onclick="event.stopPropagation()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
+      <td><select onchange="m.expenses[${i}].category=this.value;save();render()" onclick="event.stopPropagation()"><option ${e.category=="Rent"?"selected":""}>Rent</option><option ${e.category=="Food"?"selected":""}>Food</option><option ${e.category=="Fun"?"selected":""}>Fun</option><option ${e.category=="Travel"?"selected":""}>Travel</option><option ${e.category=="Saved"?"selected":""}>Saved</option></select></td>
       <td><button onclick="deleteExpense(${i})">✕</button></td>
     </tr>`).join("");
 
