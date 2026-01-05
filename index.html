@@ -61,7 +61,7 @@ body {
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.04);
-  height: 580px; /* Lite högre för att rymma allt */
+  height: 580px; 
   display: flex;
   flex-direction: column;
   position: relative;
@@ -902,7 +902,7 @@ function drawCharts(m){
       }
   });
 
-  // 2. LINE CHART (FIXED: Daily Cumulative)
+  // 2. LINE CHART (FIXED: Daily Cumulative + "Day" Labels)
   const lineCtx = document.getElementById('lineChart').getContext('2d');
   if(lineChartInstance) lineChartInstance.destroy();
 
@@ -910,7 +910,9 @@ function drawCharts(m){
   const month = parseInt(currentMonth.split('-')[1]);
   const daysInMonth = new Date(year, month, 0).getDate();
   
-  const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+  // FIX: Labels now say "Day 1", "Day 2", etc.
+  const labels = Array.from({length: daysInMonth}, (_, i) => "Day " + (i + 1));
+  
   const dailyExpenses = new Array(daysInMonth).fill(0);
   const dailySavings = new Array(daysInMonth).fill(0);
 
@@ -919,7 +921,7 @@ function drawCharts(m){
   let cumExp = 0;
   let cumSave = 0;
 
-  // Build daily data points (holding previous value if no expenses that day)
+  // Build daily data points
   for (let day = 1; day <= daysInMonth; day++) {
       const dayStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
       
