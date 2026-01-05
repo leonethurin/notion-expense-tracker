@@ -44,6 +44,7 @@ body {
   width: 100%;
   max-width: 1100px;
   padding: 0 20px;
+  position: relative;
 }
 
 /* --- LAYOUT GRID --- */
@@ -67,7 +68,7 @@ body {
   overflow: hidden; 
 }
 
-/* --- CARD HEADER --- */
+/* --- HEADER --- */
 .card-header-row {
   display: flex;
   justify-content: space-between;
@@ -82,7 +83,7 @@ body {
     align-items: center;
 }
 
-/* Status indicator for Sync */
+/* Status & Settings */
 #syncStatus {
     font-size: 11px;
     font-weight: 600;
@@ -90,8 +91,7 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-right: 10px;
-    cursor: pointer;
+    margin-right: 6px;
 }
 .status-dot {
     width: 8px;
@@ -102,6 +102,18 @@ body {
 .status-green { background: var(--matcha-dark); }
 .status-yellow { background: #fbc02d; }
 .status-red { background: var(--strawberry-dark); }
+
+.settings-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px;
+    color: var(--text-light);
+    opacity: 0.6;
+    transition: 0.2s;
+}
+.settings-btn:hover { opacity: 1; transform: rotate(45deg); }
 
 
 /* TABS */
@@ -147,7 +159,6 @@ body {
 .header-select:hover { background: #eaeaeb; }
 .header-select:focus { outline: none; box-shadow: 0 0 0 2px var(--strawberry-light); }
 
-
 /* --- CONTENT --- */
 .tab-content {
     flex: 1;
@@ -156,7 +167,6 @@ body {
     overflow: hidden;
     padding: 2px;
 }
-
 .hidden { display: none !important; }
 
 /* INPUTS */
@@ -169,7 +179,6 @@ label {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 input, select {
   width: 100%;
   padding: 9px 12px;
@@ -180,7 +189,6 @@ input, select {
   transition: all 0.2s;
   color: var(--text-main);
 }
-
 input:focus, select:focus {
   outline: none;
   background: #fff;
@@ -196,7 +204,6 @@ input:focus, select:focus {
     margin-top: 16px;
     border: 1px solid #eeeeee;
 }
-
 .add-expense-box input, 
 .add-expense-box select {
     background: #FFFFFF;
@@ -222,10 +229,7 @@ input:focus, select:focus {
   transition: transform 0.1s, background 0.2s;
   box-shadow: 0 4px 10px rgba(244, 143, 177, 0.3);
 }
-.btn-primary:hover { 
-    background: var(--strawberry-hover); 
-    transform: translateY(-1px);
-}
+.btn-primary:hover { background: var(--strawberry-hover); transform: translateY(-1px); }
 
 .btn-delete {
     background: transparent;
@@ -238,7 +242,7 @@ input:focus, select:focus {
 }
 .btn-delete:hover { background: #ffebee; }
 
-/* --- TABLE --- */
+/* TABLE */
 .table-container {
     height: 100%; 
     border: 1px solid var(--border-color);
@@ -247,183 +251,89 @@ input:focus, select:focus {
     display: flex;
     flex-direction: column;
 }
-
-.expenses-scroll {
-    overflow-y: auto; 
-    flex: 1; 
-}
+.expenses-scroll { overflow-y: auto; flex: 1; }
 .expenses-scroll::-webkit-scrollbar { width: 6px; }
 .expenses-scroll::-webkit-scrollbar-track { background: transparent; }
 .expenses-scroll::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
-
 table { width: 100%; border-collapse: collapse; }
-
 th {
-  background: #fff;
-  text-align: left;
-  padding: 12px;
-  font-size: 11px;
-  color: var(--text-light);
-  font-weight: 600;
-  position: sticky;
-  top: 0;
-  border-bottom: 1px solid var(--border-color);
-  z-index: 10;
+  background: #fff; text-align: left; padding: 12px; font-size: 11px;
+  color: var(--text-light); font-weight: 600; position: sticky; top: 0;
+  border-bottom: 1px solid var(--border-color); z-index: 10;
 }
-
-td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color);
-  font-size: 13px;
-  vertical-align: middle;
-}
-
+td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); font-size: 13px; vertical-align: middle; }
 td input, td select {
-    padding: 5px;
-    font-size: 13px;
-    margin: -5px; 
-    width: calc(100% + 10px);
-    background: transparent;
-    border: 1px solid transparent;
+    padding: 5px; font-size: 13px; margin: -5px; width: calc(100% + 10px);
+    background: transparent; border: 1px solid transparent;
 }
 td input:hover, td select:hover { background: #f5f5f5; }
-td input:focus, td select:focus { 
-    background: white; 
-    border-color: var(--strawberry); 
-    box-shadow: none;
-}
+td input:focus, td select:focus { background: white; border-color: var(--strawberry); box-shadow: none; }
 
-/* --- CHARTS --- */
+/* CHARTS */
 .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 16px;
-    flex-shrink: 0;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; flex-shrink: 0;
 }
-
-.kpi-card {
-    border-radius: 12px;
-    padding: 14px;
-    text-align: center;
-    color: white;
-}
+.kpi-card { border-radius: 12px; padding: 14px; text-align: center; color: white; }
 .kpi-card h4 { margin: 0 0 4px 0; font-weight: 500; font-size: 12px; opacity: 0.95; }
 .kpi-card strong { font-size: 18px; font-weight: 700; }
-
 .bg-pink { background: var(--strawberry); }
 .bg-green { background: var(--matcha); }
-
 .charts-area {
-    background: #fafafa;
-    border-radius: 16px;
-    padding: 16px;
-    border: 1px solid rgba(0,0,0,0.03);
-    flex: 1; 
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    overflow: hidden; 
-    min-height: 0; 
+    background: #fafafa; border-radius: 16px; padding: 16px;
+    border: 1px solid rgba(0,0,0,0.03); flex: 1; display: flex; gap: 16px;
+    align-items: center; overflow: hidden; min-height: 0; 
 }
-
 .chart-wrapper-pie { width: 35%; height: 100%; position: relative; }
 .chart-wrapper-line { width: 65%; height: 100%; position: relative; }
 
-/* --- SIDEBAR --- */
+/* SIDEBAR */
 .sidebar-section { margin-bottom: 24px; }
-
 .summary-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    padding: 8px 12px; 
-    border-radius: 10px;
-    font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px;
 }
-
 .sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
 .sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
-
 .summary-item span:first-child { font-weight: 500; }
 .summary-item span:last-child { font-weight: 700; font-size: 14px; }
-
 .progress-group { margin-bottom: 16px; }
 .progress-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 11px;
-    margin-bottom: 6px;
-    color: var(--text-light);
-    font-weight: 600;
+    display: flex; justify-content: space-between; font-size: 11px;
+    margin-bottom: 6px; color: var(--text-light); font-weight: 600;
 }
-.progress-track {
-    height: 8px;
-    background: #f0f0f0;
-    border-radius: 20px;
-    overflow: hidden;
-}
+.progress-track { height: 8px; background: #f0f0f0; border-radius: 20px; overflow: hidden; }
 .progress-fill { height: 100%; transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
-
 .remaining-card {
-    background: var(--strawberry);
-    color: white;
-    padding: 18px;
-    border-radius: 14px;
-    text-align: center;
-    margin-top: auto; 
+    background: var(--strawberry); color: white; padding: 18px;
+    border-radius: 14px; text-align: center; margin-top: auto; 
     box-shadow: 0 4px 12px rgba(244, 143, 177, 0.4);
 }
 .remaining-card p { margin: 0 0 6px 0; font-size: 12px; opacity: 0.9; }
 .remaining-card strong { font-size: 26px; display: block; }
-
 .btn-export {
-    margin-top: 10px;
-    width: 100%;
-    background: transparent;
-    border: 1px dashed #ccc;
-    color: var(--text-light);
-    padding: 8px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: all 0.2s;
+    margin-top: 10px; width: 100%; background: transparent; border: 1px dashed #ccc;
+    color: var(--text-light); padding: 8px; border-radius: 8px; cursor: pointer;
+    font-size: 11px; transition: all 0.2s;
 }
 .btn-export:hover { border-color: var(--strawberry); color: var(--strawberry); background: var(--strawberry-light); }
-
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-4 { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; }
 
-/* LOADING OVERLAY */
-#loadingOverlay {
-    position: absolute;
-    top:0; left:0; width:100%; height:100%;
-    background: rgba(255,255,255,0.95);
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-weight: 600;
-    color: var(--matcha-dark);
-    text-align: center;
-    padding: 20px;
+/* --- SCREENS (SETUP / LOADING) --- */
+.overlay-screen {
+    position: absolute; top:0; left:0; width:100%; height:100%;
+    background: rgba(255,255,255,0.98);
+    z-index: 200;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; padding: 40px;
+    border-radius: 16px;
 }
-#errorMsg {
-    color: var(--strawberry-dark);
-    font-size: 12px;
-    margin-top: 10px;
-    max-width: 300px;
+.overlay-screen h2 { color: var(--matcha-dark); margin-bottom: 10px; }
+.overlay-screen p { color: var(--text-light); font-size: 14px; max-width: 400px; line-height: 1.5; margin-bottom: 20px; }
+.setup-input { 
+    padding: 12px; width: 300px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 10px;
 }
-.retry-btn {
-    margin-top: 15px;
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    background: white;
-    border-radius: 6px;
-    cursor: pointer;
-}
+.setup-input:focus { border-color: var(--strawberry); outline: none; }
 
 </style>
 </head>
@@ -431,15 +341,28 @@ td input:focus, td select:focus {
 <body>
 <div class="app">
 
+  <div id="setupScreen" class="overlay-screen hidden">
+      <h2>Welcome to Budget Buddy! 🍓</h2>
+      <p>To start syncing your expenses across devices (and keep them private), you need a free Pantry ID.</p>
+      
+      <div style="background:#f9f9f9; padding:15px; border-radius:8px; margin-bottom:20px; text-align:left; font-size:13px;">
+          1. Go to <a href="https://getpantry.cloud/" target="_blank" style="color:var(--strawberry-dark)">getpantry.cloud</a><br>
+          2. Click "Create Pantry" & enter your email.<br>
+          3. Copy your <strong>Pantry ID</strong>.<br>
+          4. Paste it below.
+      </div>
+
+      <input type="text" id="pantryIdInput" class="setup-input" placeholder="Paste ID here (e.g. d345...)" />
+      <button class="btn-primary" style="width:300px" onclick="savePantryId()">Start Tracking</button>
+  </div>
+
+  <div id="loadingOverlay" class="overlay-screen hidden">
+      <h3 style="color:var(--matcha-dark)">Syncing...</h3>
+  </div>
+
   <div class="container">
     
     <div class="main-card">
-        <div id="loadingOverlay">
-            <div id="loadingText">Connecting to cloud...</div>
-            <div id="errorMsg"></div>
-            <button class="retry-btn hidden" onclick="loadData()">Retry</button>
-        </div>
-            
         <div class="card-header-row">
             <div class="tabs">
                 <button class="active" onclick="showTab('track')">Track</button>
@@ -448,10 +371,12 @@ td input:focus, td select:focus {
             </div>
             
             <div class="header-controls">
-                <div id="syncStatus" title="Status">
+                <div id="syncStatus" title="Green = Synced">
                     <div class="status-dot status-yellow" id="statusDot"></div>
-                    <span id="statusText">Connecting...</span>
+                    <span id="statusText">...</span>
                 </div>
+                
+                <button class="settings-btn" onclick="openSetup()" title="Change Cloud ID">⚙️</button>
 
                 <select id="currencySelect" class="header-select" onchange="changeCurrency()">
                     <option value="kr">SEK (kr)</option>
@@ -612,23 +537,57 @@ td input:focus, td select:focus {
 
 <script>
 // ==========================================
-// CONFIG: PANTRY.CLOUD
+// CONFIG: DYNAMIC PANTRY ID
 // ==========================================
-const PANTRY_ID = "e310a436-de14-49f9-ad1b-7c455a16c227"; 
-const BASKET_NAME = "expenseTracker"; 
-// ==========================================
+const BASKET_NAME = "expenseTracker"; // We use one generic basket name, but separate IDs
+let userPantryId = localStorage.getItem("userPantryId"); // Load saved ID
 
 let fullData = {}; 
 let settings = { currency: "kr" };
 let currentMonth = new Date().toISOString().slice(0,7);
 let saveTimeout;
 
+// -- SETUP LOGIC --
+
+function initApp() {
+    initMonths();
+    
+    if(!userPantryId) {
+        // No ID found? Show Setup Screen
+        document.getElementById('setupScreen').classList.remove('hidden');
+    } else {
+        // ID found? Start loading
+        loadData();
+    }
+}
+
+function savePantryId() {
+    const input = document.getElementById('pantryIdInput').value.trim();
+    if(input.length < 5) {
+        alert("Please enter a valid Pantry ID.");
+        return;
+    }
+    userPantryId = input;
+    localStorage.setItem("userPantryId", userPantryId);
+    document.getElementById('setupScreen').classList.add('hidden');
+    loadData();
+}
+
+function openSetup() {
+    if(confirm("Do you want to change your Cloud ID? This will switch to a different budget.")) {
+        document.getElementById('pantryIdInput').value = userPantryId || "";
+        document.getElementById('setupScreen').classList.remove('hidden');
+    }
+}
+
+// -- SYNC LOGIC --
+
 function setStatus(state, msg) {
     const dot = document.getElementById('statusDot');
     const txt = document.getElementById('statusText');
     if(state === 'loading') {
         dot.className = "status-dot status-yellow";
-        txt.textContent = "Syncing...";
+        txt.textContent = "Syncing";
     } else if (state === 'saved') {
         dot.className = "status-dot status-green";
         txt.textContent = "Synced";
@@ -639,394 +598,5 @@ function setStatus(state, msg) {
 }
 
 async function loadData() {
-    // 1. Check if ID is set
-    if(PANTRY_ID.includes("HÄR") || PANTRY_ID.length < 5) {
-        document.getElementById('loadingText').textContent = "ID Missing";
-        document.getElementById('errorMsg').textContent = "Replace 'DITT_PANTRY_ID_HÄR' in code.";
-        // Fallback to LocalStorage so user can see UI
-        setTimeout(() => {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            fullData = JSON.parse(localStorage.getItem("budgetData")) || {};
-            settings = JSON.parse(localStorage.getItem("budgetSettings")) || { currency: "kr" };
-            render();
-            setStatus('error', "No ID");
-        }, 1500);
-        return;
-    }
-
+    document.getElementById('loadingOverlay').classList.remove('hidden');
     setStatus('loading');
-    
-    // 2. Try Fetch
-    try {
-        const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
-        const res = await fetch(url);
-        
-        // 3. Handle Basket Not Found (New User)
-        if(!res.ok) {
-            // If it's a 400/404/500, we might need to initialize
-            console.warn("Fetch failed, status:", res.status);
-            
-            // Assume it's a new basket and try to create it immediately
-            const initSuccess = await createInitialBasket();
-            if(initSuccess) {
-                // If creation worked, we are good to go with empty data
-                document.getElementById('loadingOverlay').classList.add('hidden');
-                setStatus('saved');
-                render();
-                return;
-            } else {
-                throw new Error("Could not init basket (" + res.status + ")");
-            }
-        }
-
-        // 4. Success Parse
-        const json = await res.json();
-        fullData = json.data || {};
-        settings = json.settings || { currency: "kr" };
-        
-        document.getElementById('currencySelect').value = settings.currency;
-        document.getElementById('loadingOverlay').classList.add('hidden');
-        setStatus('saved');
-        render();
-
-    } catch(e) {
-        console.error(e);
-        document.getElementById('loadingText').textContent = "Connection Failed";
-        document.getElementById('errorMsg').textContent = e.message;
-        document.querySelector('.retry-btn').classList.remove('hidden');
-        setStatus('error', "Net Error");
-    }
-}
-
-// Helper to create basket if it doesn't exist
-async function createInitialBasket() {
-    try {
-        console.log("Attempting to create/reset basket...");
-        const payload = { data: {}, settings: { currency: "kr" } };
-        const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
-        
-        const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-        
-        if(res.ok) {
-            fullData = {};
-            settings = { currency: "kr" };
-            return true;
-        }
-        return false;
-    } catch(e) {
-        console.error("Init failed", e);
-        return false;
-    }
-}
-
-async function saveData() {
-    // If no ID, use LocalStorage
-    if(PANTRY_ID.includes("HÄR")) {
-        localStorage.setItem("budgetData", JSON.stringify(fullData)); 
-        localStorage.setItem("budgetSettings", JSON.stringify(settings));
-        return;
-    }
-
-    setStatus('loading');
-    try {
-        const payload = { data: fullData, settings: settings };
-        const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
-        
-        const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
-        
-        if(!res.ok) throw new Error("Save Status: " + res.status);
-        
-        setStatus('saved');
-    } catch(e) {
-        console.error(e);
-        setStatus('error', "Save Failed");
-    }
-}
-
-function debouncedSave() {
-    saveMetaLocally(); 
-    clearTimeout(saveTimeout);
-    setStatus('loading');
-    saveTimeout = setTimeout(saveData, 1500);
-}
-
-// -- APP LOGIC --
-
-function formatMoney(num) {
-    if(!num && num !== 0) return "0 " + settings.currency;
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + settings.currency;
-}
-
-function initMonths(){
-  const sel = document.getElementById('monthSelect');
-  sel.innerHTML = "";
-  for(let i=0; i<6; i++){
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    const m = d.toISOString().slice(0,7);
-    const opt = document.createElement('option');
-    opt.value = m;
-    opt.innerText = m;
-    sel.appendChild(opt);
-  }
-  sel.value = currentMonth;
-}
-
-function getMonth(){
-  if(!fullData[currentMonth]) fullData[currentMonth] = { income: 0, goal: 0, expenses: [] };
-  return fullData[currentMonth];
-}
-
-function changeMonth(){ 
-    currentMonth = document.getElementById('monthSelect').value; 
-    render(); 
-}
-
-function changeCurrency() {
-    settings.currency = document.getElementById('currencySelect').value;
-    saveData();
-    render();
-}
-
-function saveMetaLocally(){
-  const m = getMonth();
-  m.income = +document.getElementById('income').value;
-  m.goal = +document.getElementById('savingsGoal').value;
-  render(); 
-}
-
-function addExpense(){
-  const nameVal = document.getElementById('inputName').value;
-  const amountVal = document.getElementById('inputAmount').value;
-  const typeVal = document.getElementById('inputType').value;
-  const catVal = document.getElementById('inputCategory').value;
-
-  if(!nameVal || !amountVal) {
-      alert("Please enter name and amount");
-      return;
-  }
-
-  getMonth().expenses.push({
-    id: Date.now(),
-    name: nameVal,
-    amount: +amountVal,
-    type: typeVal,
-    category: catVal,
-    date: new Date().toISOString().slice(0,10)
-  });
-
-  document.getElementById('inputName').value = "";
-  document.getElementById('inputAmount').value = "";
-  
-  saveData(); 
-  render();
-}
-
-window.updateExpense = function(index, field, element) {
-    const m = getMonth();
-    let val = element.value;
-    if(field === 'amount') val = Number(val);
-    m.expenses[index][field] = val;
-    
-    render(); 
-    
-    clearTimeout(saveTimeout);
-    setStatus('loading');
-    saveTimeout = setTimeout(saveData, 2000); 
-}
-
-function deleteExpense(i){
-  if(confirm("Delete this expense?")){
-      getMonth().expenses.splice(i,1);
-      saveData();
-      render();
-  }
-}
-
-let pieChartInstance, lineChartInstance;
-
-function render(){
-  const m = getMonth();
-  
-  if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
-  if(document.activeElement.id !== 'savingsGoal') document.getElementById('savingsGoal').value = m.goal || "";
-
-  let totalExp = m.expenses.filter(e => e.category !== "Saved").reduce((a,b) => a + b.amount, 0);
-  let totalSaved = m.expenses.filter(e => e.category === "Saved").reduce((a,b) => a + b.amount, 0);
-  let remainingVal = m.income - totalExp - totalSaved;
-
-  document.getElementById('kIncome').textContent = formatMoney(m.income);
-  document.getElementById('sIncome').textContent = formatMoney(m.income);
-  
-  document.getElementById('kExpenses').textContent = formatMoney(totalExp);
-  document.getElementById('sExpenses').textContent = formatMoney(totalExp);
-
-  document.getElementById('kSaved').textContent = formatMoney(totalSaved);
-  document.getElementById('sSaved').textContent = formatMoney(totalSaved);
-
-  document.getElementById('remaining').textContent = formatMoney(remainingVal.toFixed(2));
-
-  const incomePct = m.income ? Math.min((totalExp / m.income) * 100, 100) : 0;
-  document.getElementById('incomeBar').style.width = incomePct + "%";
-  document.getElementById('incomeUsageText').textContent = incomePct.toFixed(0) + "% used";
-
-  const goalPct = m.goal ? Math.min((totalSaved / m.goal) * 100, 100) : 0;
-  document.getElementById('saveBar').style.width = goalPct + "%";
-  document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
-
-  const tbody = document.getElementById('expenseTable');
-  tbody.innerHTML = m.expenses.map((e, i) => `
-    <tr>
-      <td><input type="date" value="${e.date}" onchange="updateExpense(${i}, 'date', this)"></td>
-      <td><input type="text" value="${e.name}" onchange="updateExpense(${i}, 'name', this)"></td>
-      <td><input type="number" value="${e.amount}" onchange="updateExpense(${i}, 'amount', this)"></td>
-      <td>
-        <select onchange="updateExpense(${i}, 'type', this)">
-            <option ${e.type=="Fixed"?"selected":""}>Fixed</option>
-            <option ${e.type=="Variable"?"selected":""}>Variable</option>
-        </select>
-      </td>
-      <td>
-        <select onchange="updateExpense(${i}, 'category', this)">
-            <option ${e.category=="Rent"?"selected":""}>Rent</option>
-            <option ${e.category=="Food"?"selected":""}>Food</option>
-            <option ${e.category=="Fun"?"selected":""}>Fun</option>
-            <option ${e.category=="Travel"?"selected":""}>Travel</option>
-            <option ${e.category=="Subscriptions"?"selected":""}>Subscriptions</option>
-            <option ${e.category=="Bills"?"selected":""}>Bills</option>
-            <option ${e.category=="Saved"?"selected":""}>Saved</option>
-            <option ${e.category=="Other"?"selected":""}>Other</option>
-        </select>
-      </td>
-      <td><button class="btn-delete" onclick="deleteExpense(${i})">✕</button></td>
-    </tr>
-  `).join("");
-
-  drawCharts(m);
-}
-
-function drawCharts(m){
-  const cats = {};
-  m.expenses.filter(e => e.category !== "Saved").forEach(e => {
-      cats[e.category] = (cats[e.category] || 0) + e.amount;
-  });
-
-  const pieCtx = document.getElementById('pieChart').getContext('2d');
-  if(pieChartInstance) pieChartInstance.destroy();
-  
-  const colors = ["#f48fb1", "#8fc7a4", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0", "#ffecb3", "#b39ddb"];
-
-  pieChartInstance = new Chart(pieCtx, {
-      type: "doughnut",
-      data: {
-          labels: Object.keys(cats),
-          datasets: [{
-              data: Object.values(cats),
-              backgroundColor: colors,
-              borderWidth: 0,
-              hoverOffset: 4
-          }]
-      },
-      options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } } 
-      }
-  });
-
-  let cum = 0;
-  let vals = [];
-  const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
-  
-  sortedExp.forEach(e => {
-      if(e.category !== "Saved"){
-          cum += e.amount;
-          vals.push({x: e.date, y: cum});
-      }
-  });
-
-  const lineCtx = document.getElementById('lineChart').getContext('2d');
-  if(lineChartInstance) lineChartInstance.destroy();
-  
-  const labels = vals.map((_, i) => i + 1); 
-  const dataPoints = vals.map(v => v.y);
-
-  lineChartInstance = new Chart(lineCtx, {
-      type: "line",
-      data: {
-          labels: labels,
-          datasets: [
-            {
-              label: "Spending",
-              data: dataPoints,
-              borderColor: "#f48fb1", 
-              borderWidth: 2,
-              tension: 0.4,
-              fill: true,
-              backgroundColor: "rgba(244, 143, 177, 0.15)", 
-              pointBackgroundColor: "#f48fb1",
-              pointRadius: 3
-            },
-            {
-                label: "Limit",
-                data: labels.map(() => m.income),
-                borderColor: "#8fc7a4",
-                borderDash: [5, 5],
-                pointRadius: 0,
-                borderWidth: 1.5
-            }
-          ]
-      },
-      options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          scales: { 
-              y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: {size: 10} } },
-              x: { grid: { display: false } }
-          },
-          plugins: { legend: { display: false } }
-      }
-  });
-}
-
-function showTab(id){
-  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
-  const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
-  if(btn) btn.classList.add("active");
-  else if(event) event.target.classList.add("active");
-
-  document.querySelectorAll('.tab-content').forEach(d => d.classList.add('hidden'));
-  document.getElementById(id).classList.remove("hidden");
-  
-  if(id === 'charts') render();
-}
-
-function exportCSV() {
-    const m = getMonth();
-    let csv = "Date,Name,Amount,Type,Category\n";
-    m.expenses.forEach(e => {
-        csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `budget_${currentMonth}.csv`;
-    a.click();
-}
-
-// Start
-initMonths();
-loadData(); 
-
-</script>
-</body>
-</html>
