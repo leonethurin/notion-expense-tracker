@@ -96,6 +96,11 @@ input, select {
   border: 1px solid #ddd;
 }
 
+#monthSelect {
+  width: auto;
+  padding: 8px 12px;
+}
+
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -142,9 +147,30 @@ td, th {
   text-align: center;
 }
 
+.kpi:nth-child(1) {
+  background: var(--strawberry);
+  color: white;
+}
+
+.kpi:nth-child(2) {
+  background: var(--matcha);
+  color: white;
+}
+
+.kpi:nth-child(3) {
+  background: var(--strawberry);
+  color: white;
+}
+
+.kpi strong {
+  font-size: 1.4em;
+  display: block;
+  margin-top: 6px;
+}
+
 .chart-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1.5fr;
   gap: 16px;
 }
 
@@ -155,9 +181,23 @@ td, th {
   height: 320px;
 }
 
+.chart-box:nth-child(2) {
+  height: 320px;
+}
+
 canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+.summary-section {
+  margin-bottom: 12px;
+}
+
+.summary-section p {
+  margin: 4px 0;
+  font-size: 14px;
+  font-weight: 600;
 }
 </style>
 </head>
@@ -245,14 +285,17 @@ canvas {
 <!-- SUMMARY -->
 <div class="card">
 <h2>Monthly summary</h2>
-<p>Income: <span id="sIncome">0</span></p>
-<p>Expenses: <span id="sExpenses">0</span></p>
-<p>Saved: <span id="sSaved">0</span></p>
 
-<h4>Income usage</h4>
+<div class="summary-section">
+  <p>Income: <span id="sIncome">0</span></p>
+  <p>Expenses: <span id="sExpenses">0</span></p>
+  <p>Saved: <span id="sSaved">0</span></p>
+</div>
+
+<h4 style="margin-bottom: 6px;">Income usage</h4>
 <div class="progress"><div id="incomeBar" style="background:var(--matcha)"></div></div>
 
-<h4>Savings goal</h4>
+<h4 style="margin-bottom: 6px; margin-top: 14px;">Savings goal</h4>
 <div class="progress"><div id="saveBar" style="background:var(--strawberry)"></div></div>
 
 <div style="background:var(--strawberry);color:white;padding:12px;border-radius:14px;margin-top:14px">
