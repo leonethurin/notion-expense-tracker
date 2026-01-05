@@ -10,7 +10,7 @@
 :root {
   /* STRAWBERRY MATCHA PALETTE */
   --matcha: #8fc7a4;
-  --matcha-dark: #669e7c; /* Green for text/title */
+  --matcha-dark: #669e7c; 
   --matcha-light: #e8f5e9;
   
   --strawberry: #f48fb1;
@@ -50,7 +50,7 @@ body {
 .top-brand {
     margin-bottom: 12px;
     font-weight: 700; 
-    color: var(--matcha-dark); /* Green Title */
+    color: var(--matcha-dark);
     font-size: 22px;
     display: flex;
     align-items: center;
@@ -66,7 +66,6 @@ body {
 }
 
 /* FIXED HEIGHT CARDS */
-/* Reduced height to 510px (approx 2 rows shorter) */
 .main-card, .sidebar-card {
   background: var(--card-bg);
   border-radius: 16px;
@@ -80,13 +79,18 @@ body {
   overflow: hidden; 
 }
 
-/* --- CARD HEADER (Tabs + Month Select) --- */
+/* --- CARD HEADER (Tabs + Controls) --- */
 .card-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
   flex-shrink: 0;
+}
+
+.header-controls {
+    display: flex;
+    gap: 8px;
 }
 
 /* TABS */
@@ -117,8 +121,8 @@ body {
   font-weight: 600;
 }
 
-/* MONTH SELECTOR */
-#monthSelect {
+/* DROPDOWNS (Month & Currency) */
+.header-select {
     width: auto;
     border: none;
     background: #f4f4f5;
@@ -129,8 +133,8 @@ body {
     cursor: pointer;
     font-size: 13px;
 }
-#monthSelect:hover { background: #eaeaeb; }
-#monthSelect:focus { box-shadow: none; border: none; outline: 2px solid var(--strawberry); }
+.header-select:hover { background: #eaeaeb; }
+.header-select:focus { outline: none; box-shadow: 0 0 0 2px var(--strawberry-light); }
 
 
 /* --- CONTENT AREAS --- */
@@ -144,7 +148,7 @@ body {
 
 .hidden { display: none !important; }
 
-/* INPUTS (Generic) */
+/* INPUTS */
 label {
   display: block;
   font-size: 11px;
@@ -157,11 +161,11 @@ label {
 
 input, select {
   width: 100%;
-  padding: 9px 12px; /* Slightly smaller vertical padding for compactness */
+  padding: 9px 12px;
   border-radius: 8px;
   border: 1px solid transparent; 
   font-size: 13px;
-  background: var(--input-bg); /* Default Light Grey */
+  background: var(--input-bg);
   transition: all 0.2s;
   color: var(--text-main);
 }
@@ -173,20 +177,19 @@ input:focus, select:focus {
   box-shadow: 0 0 0 3px var(--strawberry-light);
 }
 
-/* ADD EXPENSE BOX (Special Styling) */
+/* ADD EXPENSE BOX */
 .add-expense-box {
-    background: #FAFAFA; /* Specific background per request */
+    background: #FAFAFA;
     padding: 18px;
     border-radius: 12px;
     margin-top: 16px;
     border: 1px solid #eeeeee;
 }
 
-/* Inputs inside Add Expense Box are White */
 .add-expense-box input, 
 .add-expense-box select {
     background: #FFFFFF;
-    border: 1px solid #e0e0e0; /* Subtle border to make them pop */
+    border: 1px solid #e0e0e0; 
 }
 .add-expense-box input:focus, 
 .add-expense-box select:focus {
@@ -238,8 +241,6 @@ input:focus, select:focus {
     overflow-y: auto; 
     flex: 1; 
 }
-
-/* Scrollbar */
 .expenses-scroll::-webkit-scrollbar { width: 6px; }
 .expenses-scroll::-webkit-scrollbar-track { background: transparent; }
 .expenses-scroll::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
@@ -266,7 +267,6 @@ td {
   vertical-align: middle;
 }
 
-/* Table Inputs */
 td input, td select {
     padding: 5px;
     font-size: 13px;
@@ -328,7 +328,7 @@ td input:focus, td select:focus {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
-    padding: 8px 12px; /* Slightly tighter */
+    padding: 8px 12px; 
     border-radius: 10px;
     font-size: 13px;
 }
@@ -406,7 +406,14 @@ td input:focus, td select:focus {
                 <button onclick="showTab('charts')">Charts</button>
             </div>
             
-            <select id="monthSelect" onchange="changeMonth()"></select>
+            <div class="header-controls">
+                <select id="currencySelect" class="header-select" onchange="changeCurrency()">
+                    <option value="kr">SEK (kr)</option>
+                    <option value="€">EUR (€)</option>
+                    <option value="$">USD ($)</option>
+                </select>
+                <select id="monthSelect" class="header-select" onchange="changeMonth()"></select>
+            </div>
         </div>
 
         <div id="track" class="tab-content">
@@ -557,11 +564,15 @@ td input:focus, td select:focus {
 <script>
 // ---------- LOGIC ----------
 let data = JSON.parse(localStorage.getItem("budgetData")) || {};
+let settings = JSON.parse(localStorage.getItem("budgetSettings")) || { currency: "kr" };
 let currentMonth = new Date().toISOString().slice(0,7);
 
+// Initialize currency selector
+document.getElementById('currencySelect').value = settings.currency;
+
 function formatMoney(num) {
-    if(!num) return "0";
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    if(!num && num !== 0) return "0 " + settings.currency;
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + settings.currency;
 }
 
 function initMonths(){
@@ -584,11 +595,20 @@ function getMonth(){
   return data[currentMonth];
 }
 
-function save(){ localStorage.setItem("budgetData", JSON.stringify(data)); }
+function save(){ 
+    localStorage.setItem("budgetData", JSON.stringify(data)); 
+    localStorage.setItem("budgetSettings", JSON.stringify(settings));
+}
 
 function changeMonth(){ 
     currentMonth = document.getElementById('monthSelect').value; 
     render(); 
+}
+
+function changeCurrency() {
+    settings.currency = document.getElementById('currencySelect').value;
+    save();
+    render();
 }
 
 function saveMeta(){
