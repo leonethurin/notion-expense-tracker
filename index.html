@@ -874,7 +874,7 @@ function render(){
 }
 
 function drawCharts(m){
-  // Pie Chart (Categories)
+  // 1. PIE CHART (Kategorier) - Oförändrad
   const cats = {};
   m.expenses.filter(e => e.category !== "Saved").forEach(e => {
       cats[e.category] = (cats[e.category] || 0) + e.amount;
@@ -902,6 +902,116 @@ function drawCharts(m){
           plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } } 
       }
   });
+
+  // 2. LINE CHART (Fixad logik: En punkt per dag)
+  const lineCtx = document.getElementById('lineChart').getContext('2d');
+  if(lineChartInstance) lineChartInstance.destroy();
+
+  // Räkna ut hur många dagar månaden har
+  const year = parseInt(currentMonth.split('-')[0]);
+  const month = parseInt(currentMonth.split('-')[1]);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  
+  // Skapa en lista med alla dagar (1, 2, 3... 31)
+  const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+
+  // Skapa data-arrayer fyllda med nollor
+  const dailyExpenses = new Array(daysInMonth).fill(0);
+  const dailySavings = new Array(daysInMonth).fill(0);
+
+  // Sortera transaktioner
+  const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
+
+  // Loopa igenom varje dag i månaden för att bygga kumulativ data
+  let cumExp = 0;
+  let cumSave = 0;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+      // Hitta transaktioner för just denna dag
+      const dayStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
+      
+      // Lägg till dagens utgifter till totalen
+      const todaysItems = sortedExp.filter(e => e.date === dayStr);
+      todaysItems.forEach(e => {
+          if(e.category === "Saved") cumSave += e.amount;
+          else cumExp += e.amount;
+      });
+
+      // Spara dagens totala ställning (kumulativt)
+      dailyExpenses[day - 1] = cumExp;
+      dailySavings[day - 1] = cumSave;
+  }
+
+  // Rita grafen
+  lineChartInstance = new Chart(lineCtx, {
+      type: "line",
+      data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Spending",
+              data: dailyExpenses,
+              borderColor: "#f48fb1", 
+              backgroundColor: "rgba(244, 143, 177, 0.1)",
+              borderWidth: 2,
+              pointRadius: 1, // Små punkter för renare look
+              tension: 0.1,   // Lite rakare linjer
+              fill: true
+            },
+            {
+              label: "Budget Limit",
+              data: labels.map(() => m.monthlyBudget), // Rak linje
+              borderColor: "#f48fb1",
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false
+            },
+            {
+              label: "Savings",
+              data: dailySavings,
+              borderColor: "#669e7c",
+              backgroundColor: "rgba(102, 158, 124, 0.1)",
+              borderWidth: 2,
+              pointRadius: 1,
+              tension: 0.1,
+              fill: true
+            },
+            {
+              label: "Savings Goal",
+              data: labels.map(() => m.monthlySavingsGoal), // Rak linje
+              borderColor: "#669e7c", 
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+      },
+      options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          interaction: {
+              mode: 'index',
+              intersect: false,
+          },
+          scales: { 
+              y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: {size: 10} } },
+              x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } // Visa inte alla 31 dagar, det blir grötigt
+          },
+          plugins: { 
+              legend: { display: false },
+              tooltip: {
+                  callbacks: {
+                      label: function(context) {
+                          return context.dataset.label + ": " + context.raw + " " + settings.currency;
+                      }
+                  }
+              }
+          } 
+      }
+  });
+}
 
   // Line Chart Logic
   // We need to plot two lines: Cumulative Expenses vs Monthly Budget
