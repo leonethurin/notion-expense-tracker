@@ -50,8 +50,7 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 
     <!-- TRACK -->
     <div id="trackView">
-      <label>Monthly income</label>
-      <input id="income" type="number" />
+      <div class="grid-2"><div><label>Monthly income</label><input id="income" type="number" /></div><div><label>Savings goal</label><input id="savingsGoal" type="number" /></div></div>
 
       <label>Expense</label>
       <div class="grid-2">
@@ -88,9 +87,14 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 
     <!-- CHARTS -->
     <div id="chartsView" class="hidden">
-      <canvas id="pie" height="220"></canvas>
-      <canvas id="trend" height="220" style="margin-top:20px"></canvas>
-    </div>
+  <div class="grid-2">
+    <div class="card"><strong>Income</strong><div id="kpiIncome">0</div></div>
+    <div class="card"><strong>Expenses</strong><div id="kpiExpenses">0</div></div>
+    <div class="card"><strong>Saved</strong><div id="kpiSaved">0</div></div>
+  </div>
+  <canvas id="pie" height="200" style="margin-top:20px"></canvas>
+  <canvas id="trend" height="220" style="margin-top:20px"></canvas>
+</div>
 
   </div>
 
