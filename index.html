@@ -4,128 +4,182 @@
 <meta charset="UTF-8" />
 <title>Notion Expense Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
 :root {
   --matcha: #8fc7a4;
-  --matcha-dark: #79b895;
+  --matcha-light: #e8f5e9;
   --strawberry: #f48fb1;
-  --strawberry-dark: #ec7aa0;
+  --strawberry-light: #fce4ec;
+  --text-main: #37352f;
+  --text-light: #787774;
+  --bg-color: #f7f6f3; /* Notion light grey */
   --card-bg: #ffffff;
-  --soft-bg: #f7f7f7;
+  --border-color: #e0e0e0;
 }
 
 * { box-sizing: border-box; }
 
 body {
-  font-family: system-ui, sans-serif;
-  background: #fafafa;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-color);
+  color: var(--text-main);
   margin: 0;
-  padding: 0;
+  padding: 20px;
   min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
 }
 
 .app {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 24px;
   width: 100%;
+  max-width: 1200px;
 }
 
+/* Layout: Main Content (Left) + Sidebar (Right) */
 .container {
   display: grid;
-  grid-template-columns: 70% 30%;
+  grid-template-columns: 1fr 320px;
   gap: 24px;
+  align-items: start;
 }
 
+/* Card Styling */
 .card {
   background: var(--card-bg);
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
-.soft-card {
-  background: var(--soft-bg);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.tabs-row {
+/* Header & Tabs */
+.header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .tabs {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  background: #f0f0f0;
+  padding: 4px;
+  border-radius: 8px;
 }
 
 .tabs button {
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: 6px 16px;
+  border-radius: 6px;
   border: none;
-  background: #eee;
+  background: transparent;
+  color: var(--text-light);
+  font-weight: 500;
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .tabs button.active {
-  background: var(--matcha);
-  color: white;
+  background: white;
+  color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-button {
-  background: var(--matcha);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-button:hover {
-  background: var(--matcha-dark);
-}
-
-.hidden { display: none; }
-
+/* Inputs & Forms */
 input, select {
   width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  font-size: 14px;
+  background: #fff;
+  transition: border 0.2s;
+  color: var(--text-main);
 }
 
-#monthSelect {
-  width: auto;
-  padding: 8px 12px;
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--matcha);
+  box-shadow: 0 0 0 2px var(--matcha-light);
+}
+
+label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.progress {
-  background: #eaeaea;
-  height: 14px;
-  border-radius: 10px;
-  overflow: hidden;
+.grid-4 {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 12px;
 }
 
-.progress > div {
-  height: 100%;
+/* Action Button */
+.btn-primary {
+  background: var(--text-main); /* Eller Matcha om du vill ha grönt */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-weight: 500;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 10px;
+}
+.btn-primary:hover { opacity: 0.9; }
+
+.btn-delete {
+    background: transparent;
+    color: #ff6b6b;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+.btn-delete:hover { background: #fff0f0; border-radius: 4px; }
+
+/* Dashboard Cards (Top Row) */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
+.stat-card {
+    border-radius: 12px;
+    padding: 20px;
+    color: white;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.stat-card h4 { margin: 0 0 8px 0; font-weight: 500; font-size: 14px; opacity: 0.9;}
+.stat-card strong { font-size: 24px; font-weight: 600; }
+
+.bg-matcha { background: var(--matcha); }
+.bg-strawberry { background: var(--strawberry); }
+
+/* Table Styling */
 .expenses-scroll {
-  max-height: 360px;
+  max-height: 500px;
   overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
 }
 
 table {
@@ -133,301 +187,532 @@ table {
   border-collapse: collapse;
 }
 
-td, th {
-  padding: 6px;
-  font-size: 13px;
-}
-
-.kpis {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 16px;
-}
-
-.kpi {
-  background: var(--soft-bg);
-  border-radius: 14px;
-  padding: 14px;
-  text-align: center;
-}
-
-.kpi:nth-child(1) {
-  background: var(--strawberry);
-  color: white;
-}
-
-.kpi:nth-child(2) {
-  background: var(--matcha);
-  color: white;
-}
-
-.kpi:nth-child(3) {
-  background: var(--strawberry);
-  color: white;
-}
-
-.kpi strong {
-  font-size: 1.4em;
-  display: block;
-  margin-top: 6px;
-}
-
-.chart-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 16px;
-  align-items: center;
-}
-
-.chart-box {
-  background: transparent;
-  border-radius: 16px;
+th {
+  background: #f9f9f9;
+  text-align: left;
   padding: 12px;
-}
-
-.chart-box:nth-child(1) {
-  width: 220px;
-  height: 220px;
-}
-
-.chart-box:nth-child(2) {
-  height: 300px;
-  min-width: 450px;
-}
-
-canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.summary-section {
-  margin-bottom: 12px;
-}
-
-.summary-section p {
-  margin: 4px 0;
-  font-size: 14px;
+  font-size: 12px;
+  color: var(--text-light);
   font-weight: 600;
+  position: sticky;
+  top: 0;
+  border-bottom: 1px solid var(--border-color);
 }
+
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Edit Inputs inside Table */
+td input, td select {
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 4px;
+    font-size: 13px;
+    border-radius: 4px;
+}
+td input:hover, td select:hover {
+    background: #f0f0f0;
+}
+td input:focus, td select:focus {
+    background: white;
+    border: 1px solid var(--matcha);
+}
+
+/* Sidebar Summary */
+.sidebar-section {
+    margin-bottom: 24px;
+}
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--text-light);
+}
+.summary-row span:last-child {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.progress-container {
+    margin-bottom: 20px;
+}
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+.progress-bar {
+    height: 8px;
+    background: #eee;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.progress-fill { height: 100%; transition: width 0.5s ease; }
+
+.remaining-box {
+    background: var(--strawberry);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+}
+.remaining-box div { font-size: 13px; margin-bottom: 6px; opacity: 0.9; }
+.remaining-box strong { font-size: 28px; }
+
+/* Charts Area */
+.charts-flex {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-top: 20px;
+}
+.chart-pie { width: 35%; }
+.chart-line { width: 65%; }
+
+.hidden { display: none; }
+
 </style>
 </head>
 
 <body>
 <div class="app">
 
-<div class="container">
-
-<!-- MAIN -->
-<div class="card">
-
-<div class="tabs-row">
-  <div class="tabs">
-    <button class="active" onclick="showTab('track')">Track</button>
-    <button onclick="showTab('expenses')">Expenses</button>
-    <button onclick="showTab('charts')">Charts</button>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2 style="margin:0; display:flex; align-items:center; gap:10px;">
+          <span style="background:var(--matcha); padding:4px 8px; border-radius:6px; color:white; font-size:16px;">Expense</span> 
+          Tracker
+      </h2>
+      <select id="monthSelect" onchange="changeMonth()" style="width:auto; font-weight:600; border:none; background:transparent; cursor:pointer; font-size:16px;"></select>
   </div>
 
-  <select id="monthSelect" onchange="changeMonth()"></select>
-</div>
+  <div class="container">
+    
+    <div class="main-column">
+        
+        <div class="dashboard-cards">
+            <div class="stat-card bg-matcha">
+                <h4>Income</h4>
+                <strong id="kIncome">0</strong>
+            </div>
+            <div class="stat-card bg-strawberry">
+                <h4>Expenses</h4>
+                <strong id="kExpenses">0</strong>
+            </div>
+            <div class="stat-card bg-matcha" style="background: #a5d6a7;">
+                <h4>Saved</h4>
+                <strong id="kSaved">0</strong>
+            </div>
+        </div>
 
-<!-- TRACK -->
-<div id="track">
-  <div class="grid-2">
-    <div>
-      <label>Monthly income</label>
-      <input id="income" type="number" onchange="saveMeta()" />
+        <div class="card">
+            <div class="header-row">
+                <div class="tabs">
+                    <button class="active" onclick="showTab('track')">Track</button>
+                    <button onclick="showTab('expenses')">Expenses</button>
+                    <button onclick="showTab('charts')">Charts</button>
+                </div>
+            </div>
+
+            <div id="track">
+                <div class="grid-2">
+                    <div>
+                        <label>Monthly income</label>
+                        <input id="income" type="number" onchange="saveMeta()" placeholder="e.g. 25000" />
+                    </div>
+                    <div>
+                        <label>Savings goal</label>
+                        <input id="savingsGoal" type="number" onchange="saveMeta()" placeholder="e.g. 5000" />
+                    </div>
+                </div>
+
+                <hr style="border:0; border-top:1px solid #eee; margin: 24px 0;">
+
+                <h3 style="margin-top:0;">Add new expense</h3>
+                <div class="grid-4">
+                    <div>
+                        <label>Name</label>
+                        <input id="inputName" placeholder="Vad köpte du?" />
+                    </div>
+                    <div>
+                        <label>Amount</label>
+                        <input id="inputAmount" type="number" placeholder="Pris" />
+                    </div>
+                    <div>
+                        <label>Type</label>
+                        <select id="inputType">
+                            <option>Fixed</option>
+                            <option>Variable</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Category</label>
+                        <select id="inputCategory">
+                            <option>Rent</option>
+                            <option>Food</option>
+                            <option>Fun</option>
+                            <option>Travel</option>
+                            <option>Saved</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="addExpense()">Add Expense</button>
+            </div>
+
+            <div id="expenses" class="hidden">
+                <div class="expenses-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:130px;">Date</th>
+                                <th>Name</th>
+                                <th style="width:100px;">Amount</th>
+                                <th style="width:100px;">Type</th>
+                                <th style="width:100px;">Category</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="charts" class="hidden">
+               <div class="charts-flex">
+                   <div class="chart-pie">
+                       <canvas id="pieChart"></canvas>
+                   </div>
+                   <div class="chart-line">
+                       <canvas id="lineChart"></canvas>
+                   </div>
+               </div>
+            </div>
+
+        </div>
     </div>
-    <div>
-      <label>Savings goal</label>
-      <input id="savingsGoal" type="number" onchange="saveMeta()" />
+
+    <div class="sidebar">
+        <div class="card">
+            <h3 style="margin-top:0; margin-bottom:20px; font-size:18px;">Monthly Summary</h3>
+            
+            <div class="sidebar-section">
+                <div class="summary-row">
+                    <span>Income:</span>
+                    <span id="sIncome">0</span>
+                </div>
+                <div class="summary-row">
+                    <span>Expenses:</span>
+                    <span id="sExpenses" style="color:#f48fb1">0</span>
+                </div>
+                <div class="summary-row">
+                    <span>Saved:</span>
+                    <span id="sSaved" style="color:#8fc7a4">0</span>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Income usage</span>
+                    <span id="incomeUsageText">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="incomeBar" class="progress-fill" style="background:var(--matcha); width:0%"></div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Savings goal</span>
+                    <span id="goalText">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="saveBar" class="progress-fill" style="background:var(--strawberry); width:0%"></div>
+                </div>
+            </div>
+
+            <div class="remaining-box">
+                <div>Remaining this month</div>
+                <strong id="remaining">0.00</strong>
+            </div>
+
+            <button style="margin-top:20px; width:100%; background:white; border:1px solid #ddd; padding:8px; border-radius:6px; cursor:pointer; font-size:13px;" onclick="exportCSV()">
+                ⬇ Export to CSV
+            </button>
+        </div>
     </div>
+
   </div>
-
-  <h3>Add expense</h3>
-  <div class="grid-2">
-    <input id="name" placeholder="Name" />
-    <input id="amount" type="number" placeholder="Amount" />
-    <select id="type">
-      <option>Fixed</option>
-      <option>Variable</option>
-    </select>
-    <select id="category">
-      <option>Rent</option>
-      <option>Food</option>
-      <option>Fun</option>
-      <option>Travel</option>
-      <option>Saved</option>
-    </select>
-  </div>
-  <button style="margin-top:10px" onclick="addExpense()">Add</button>
-</div>
-
-<!-- EXPENSES -->
-<div id="expenses" class="hidden">
-  <div class="expenses-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th><th>Name</th><th>Amount</th><th>Type</th><th>Category</th><th></th>
-        </tr>
-      </thead>
-      <tbody id="expenseTable"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- CHARTS -->
-<div id="charts" class="hidden">
-  <div class="kpis">
-    <div class="kpi">Income<br><strong id="kIncome">0</strong></div>
-    <div class="kpi">Expenses<br><strong id="kExpenses">0</strong></div>
-    <div class="kpi">Saved<br><strong id="kSaved">0</strong></div>
-  </div>
-
-  <div class="chart-grid">
-    <div class="chart-box"><canvas id="pieChart"></canvas></div>
-    <div class="chart-box"><canvas id="lineChart"></canvas></div>
-  </div>
-</div>
-
-</div>
-
-<!-- SUMMARY -->
-<div class="card">
-<h2>Monthly summary</h2>
-
-<div class="summary-section">
-  <p>Income: <span id="sIncome">0</span></p>
-  <p>Expenses: <span id="sExpenses">0</span></p>
-  <p>Saved: <span id="sSaved">0</span></p>
-</div>
-
-<h4 style="margin-bottom: 6px;">Income usage</h4>
-<div class="progress"><div id="incomeBar" style="background:var(--matcha)"></div></div>
-
-<h4 style="margin-bottom: 6px; margin-top: 14px;">Savings goal</h4>
-<div class="progress"><div id="saveBar" style="background:var(--strawberry)"></div></div>
-
-<div style="background:var(--strawberry);color:white;padding:12px;border-radius:14px;margin-top:14px">
-Remaining this month: <strong id="remaining">0</strong>
-</div>
-
-<button style="margin-top:10px;width:100%">Manual sync → CSV</button>
-</div>
-
-</div>
 </div>
 
 <script>
+// ---------- LOGIC ----------
 let data = JSON.parse(localStorage.getItem("budgetData")) || {};
 let currentMonth = new Date().toISOString().slice(0,7);
 
+// Init Month Dropdown
 function initMonths(){
-  const sel = monthSelect;
+  const sel = document.getElementById('monthSelect');
   sel.innerHTML = "";
-  for(let i=0;i<6;i++){
+  // Visar nuvarande månad + 5 månader bakåt
+  for(let i=0; i<6; i++){
     const d = new Date();
-    d.setMonth(d.getMonth()-i);
+    d.setMonth(d.getMonth() - i);
     const m = d.toISOString().slice(0,7);
-    sel.innerHTML += `<option>${m}</option>`;
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.innerText = m;
+    sel.appendChild(opt);
   }
   sel.value = currentMonth;
 }
 
 function getMonth(){
-  if(!data[currentMonth]) data[currentMonth]={income:0,goal:0,expenses:[]};
+  if(!data[currentMonth]) data[currentMonth] = { income: 0, goal: 0, expenses: [] };
   return data[currentMonth];
 }
 
-function save(){ localStorage.setItem("budgetData",JSON.stringify(data)); }
+function save(){ localStorage.setItem("budgetData", JSON.stringify(data)); }
 
-function changeMonth(){ currentMonth = monthSelect.value; render(); }
+function changeMonth(){ 
+    currentMonth = document.getElementById('monthSelect').value; 
+    render(); 
+}
 
 function saveMeta(){
   const m = getMonth();
-  m.income = +income.value;
-  m.goal = +savingsGoal.value;
-  save(); render();
+  m.income = +document.getElementById('income').value;
+  m.goal = +document.getElementById('savingsGoal').value;
+  save(); 
+  render();
 }
 
 function addExpense(){
+  // FIX: Använder specifika IDn för att undvika "undefined"
+  const nameVal = document.getElementById('inputName').value;
+  const amountVal = document.getElementById('inputAmount').value;
+  const typeVal = document.getElementById('inputType').value;
+  const catVal = document.getElementById('inputCategory').value;
+
+  if(!nameVal || !amountVal) {
+      alert("Please enter name and amount");
+      return;
+  }
+
   getMonth().expenses.push({
     id: Date.now(),
-    name: name.value,
-    amount: +amount.value,
-    type: type.value,
-    category: category.value,
+    name: nameVal,
+    amount: +amountVal,
+    type: typeVal,
+    category: catVal,
     date: new Date().toISOString().slice(0,10)
   });
-  name.value = "";
-  amount.value = "";
-  save(); render();
+
+  // Töm fält
+  document.getElementById('inputName').value = "";
+  document.getElementById('inputAmount').value = "";
+  
+  save(); 
+  render();
 }
 
-let pie,line;
+// FIX: Global funktion för att uppdatera enskild expense i listan
+// Detta löser problemet med att ändringar inte sparades
+window.updateExpense = function(index, field, element) {
+    const m = getMonth();
+    let val = element.value;
+    if(field === 'amount') val = Number(val);
+    
+    m.expenses[index][field] = val;
+    save();
+    render(); // Rita om för att uppdatera grafer och summor
+}
 
 function deleteExpense(i){
-  getMonth().expenses.splice(i,1);
-  save(); render();
+  if(confirm("Delete this expense?")){
+      getMonth().expenses.splice(i,1);
+      save(); 
+      render();
+  }
 }
+
+let pieChartInstance, lineChartInstance;
 
 function render(){
   const m = getMonth();
-  income.value = m.income;
-  savingsGoal.value = m.goal;
+  
+  // Update Inputs if empty (avoid overwriting while typing if possible, but simplicity first)
+  if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
+  if(document.activeElement.id !== 'savingsGoal') document.getElementById('savingsGoal').value = m.goal || "";
 
-  let exp = m.expenses.filter(e=>e.category!=="Saved").reduce((a,b)=>a+b.amount,0);
-  let saved = m.expenses.filter(e=>e.category==="Saved").reduce((a,b)=>a+b.amount,0);
+  // Calculations
+  let totalExp = m.expenses.filter(e => e.category !== "Saved").reduce((a,b) => a + b.amount, 0);
+  let totalSaved = m.expenses.filter(e => e.category === "Saved").reduce((a,b) => a + b.amount, 0);
+  let remainingVal = m.income - totalExp - totalSaved;
 
-  sIncome.textContent = kIncome.textContent = m.income;
-  sExpenses.textContent = kExpenses.textContent = exp;
-  sSaved.textContent = kSaved.textContent = saved;
-  remaining.textContent = (m.income-exp-saved).toFixed(2);
+  // Update Text UI
+  document.getElementById('kIncome').textContent = m.income;
+  document.getElementById('sIncome').textContent = m.income;
+  
+  document.getElementById('kExpenses').textContent = totalExp;
+  document.getElementById('sExpenses').textContent = totalExp;
 
-  incomeBar.style.width = m.income? (exp/m.income*100)+"%":"0%";
-  saveBar.style.width = m.goal? (saved/m.goal*100)+"%":"0%";
+  document.getElementById('kSaved').textContent = totalSaved;
+  document.getElementById('sSaved').textContent = totalSaved;
 
-  expenseTable.innerHTML = m.expenses.map((e,i)=>`
+  document.getElementById('remaining').textContent = remainingVal.toFixed(2);
+
+  // Bars
+  const incomePct = m.income ? Math.min((totalExp / m.income) * 100, 100) : 0;
+  document.getElementById('incomeBar').style.width = incomePct + "%";
+  document.getElementById('incomeUsageText').textContent = incomePct.toFixed(0) + "% used";
+
+  const goalPct = m.goal ? Math.min((totalSaved / m.goal) * 100, 100) : 0;
+  document.getElementById('saveBar').style.width = goalPct + "%";
+  document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
+
+  // Render Table
+  // NOTERA: Här anropar vi updateExpense() istället för att försöka nå m.expenses direkt i HTML strängen
+  const tbody = document.getElementById('expenseTable');
+  tbody.innerHTML = m.expenses.map((e, i) => `
     <tr>
-      <td><input type="date" value="${e.date}" onchange="m.expenses[${i}].date=this.value;save();render()"></td>
-      <td><input value="${e.name}" onchange="m.expenses[${i}].name=this.value;save();render()"></td>
-      <td><input type="number" value="${e.amount}" onchange="m.expenses[${i}].amount=+this.value;save();render()"></td>
-      <td><select onchange="m.expenses[${i}].type=this.value;save();render()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
-      <td><select onchange="m.expenses[${i}].category=this.value;save();render()"><option ${e.category=="Rent"?"selected":""}>Rent</option><option ${e.category=="Food"?"selected":""}>Food</option><option ${e.category=="Fun"?"selected":""}>Fun</option><option ${e.category=="Travel"?"selected":""}>Travel</option><option ${e.category=="Saved"?"selected":""}>Saved</option></select></td>
-      <td><button onclick="deleteExpense(${i})">✕</button></td>
-    </tr>`).join("");
+      <td><input type="date" value="${e.date}" onchange="updateExpense(${i}, 'date', this)"></td>
+      <td><input type="text" value="${e.name}" onchange="updateExpense(${i}, 'name', this)"></td>
+      <td><input type="number" value="${e.amount}" onchange="updateExpense(${i}, 'amount', this)"></td>
+      <td>
+        <select onchange="updateExpense(${i}, 'type', this)">
+            <option ${e.type=="Fixed"?"selected":""}>Fixed</option>
+            <option ${e.type=="Variable"?"selected":""}>Variable</option>
+        </select>
+      </td>
+      <td>
+        <select onchange="updateExpense(${i}, 'category', this)">
+            <option ${e.category=="Rent"?"selected":""}>Rent</option>
+            <option ${e.category=="Food"?"selected":""}>Food</option>
+            <option ${e.category=="Fun"?"selected":""}>Fun</option>
+            <option ${e.category=="Travel"?"selected":""}>Travel</option>
+            <option ${e.category=="Saved"?"selected":""}>Saved</option>
+            <option ${e.category=="Other"?"selected":""}>Other</option>
+        </select>
+      </td>
+      <td><button class="btn-delete" onclick="deleteExpense(${i})">✕</button></td>
+    </tr>
+  `).join("");
 
   drawCharts(m);
 }
 
 function drawCharts(m){
-  const cats={};
-  m.expenses.filter(e=>e.category!=="Saved").forEach(e=>cats[e.category]=(cats[e.category]||0)+e.amount);
+  // Pie Data
+  const cats = {};
+  m.expenses.filter(e => e.category !== "Saved").forEach(e => {
+      cats[e.category] = (cats[e.category] || 0) + e.amount;
+  });
 
-  pie?.destroy();
-  pie=new Chart(pieChart,{type:"pie",data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:["#f48fb1","#8fc7a4","#ffd1dc","#c8e6c9"]}]}});
+  const pieCtx = document.getElementById('pieChart').getContext('2d');
+  if(pieChartInstance) pieChartInstance.destroy();
+  pieChartInstance = new Chart(pieCtx, {
+      type: "doughnut",
+      data: {
+          labels: Object.keys(cats),
+          datasets: [{
+              data: Object.values(cats),
+              backgroundColor: ["#8fc7a4", "#f48fb1", "#ffd54f", "#64b5f6", "#e0e0e0"],
+              borderWidth: 0
+          }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+  });
+
+  // Line Data (Cumulative)
+  let cum = 0;
+  let vals = [];
+  // Sortera datum för linjegrafen
+  const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
   
-  let cum=0,vals=[];
-  m.expenses.forEach(e=>{ if(e.category!=="Saved"){cum+=e.amount;vals.push(cum);} });
+  sortedExp.forEach(e => {
+      if(e.category !== "Saved"){
+          cum += e.amount;
+          vals.push({x: e.date, y: cum});
+      }
+  });
 
-  line?.destroy();
-  line=new Chart(lineChart,{type:"line",data:{labels:vals.map((_,i)=>i+1),datasets:[
-    {label:"Expenses",data:vals,borderColor:"#f48fb1",tension:0.3},
-    {label:"Budget",data:vals.map(()=>m.income),borderColor:"#8fc7a4",borderDash:[6,6],tension:0.3}
-  ]},options:{maintainAspectRatio:true,responsive:true}});
+  const lineCtx = document.getElementById('lineChart').getContext('2d');
+  if(lineChartInstance) lineChartInstance.destroy();
+  
+  // Enkel linjegraf baserad på antal utgifter (index) för demo. 
+  // För riktig tidsserie behövs datum-adaptrar i Chart.js, men detta funkar för enkelhet.
+  const labels = vals.map((_, i) => i + 1); 
+  const dataPoints = vals.map(v => v.y);
+
+  lineChartInstance = new Chart(lineCtx, {
+      type: "line",
+      data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Spending",
+              data: dataPoints,
+              borderColor: "#f48fb1",
+              tension: 0.4,
+              fill: true,
+              backgroundColor: "rgba(244, 143, 177, 0.1)"
+            },
+            {
+                label: "Income Limit",
+                data: labels.map(() => m.income),
+                borderColor: "#8fc7a4",
+                borderDash: [5, 5],
+                pointRadius: 0,
+                borderWidth: 2
+            }
+          ]
+      },
+      options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } }
+      }
+  });
 }
 
 function showTab(id){
-  document.querySelectorAll(".tabs button").forEach(b=>b.classList.remove("active"));
-  event.target.classList.add("active");
-  track.classList.add("hidden");
-  expenses.classList.add("hidden");
-  charts.classList.add("hidden");
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  // Hitta knappen som klickades på genom eventet
+  const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
+  if(btn) btn.classList.add("active");
+  else if(event) event.target.classList.add("active");
+
+  document.getElementById('track').classList.add("hidden");
+  document.getElementById('expenses').classList.add("hidden");
+  document.getElementById('charts').classList.add("hidden");
+  
   document.getElementById(id).classList.remove("hidden");
 }
 
-initMonths(); render();
+function exportCSV() {
+    const m = getMonth();
+    let csv = "Date,Name,Amount,Type,Category\n";
+    m.expenses.forEach(e => {
+        csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `budget_${currentMonth}.csv`;
+    a.click();
+}
+
+// Start
+initMonths();
+render();
+
 </script>
 </body>
 </html>
