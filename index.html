@@ -34,7 +34,7 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 .variable{background:var(--strawberry)}
 .saved{background:#6a5acd}
 .locked{opacity:.6}
-.remaining-box{background:var(--strawberry);color:white;padding:10px;border-radius:12px;margin-top:8px;font-weight:600}
+.remaining-box{background:var(--strawberry);color:white;padding:12px;border-radius:14px;margin-top:10px;font-weight:700;text-align:center}
 .pie{width:160px;height:160px;border-radius:50%;margin:12px auto}
 .legend{font-size:12px}
 .legend div{display:flex;align-items:center;gap:6px;margin-bottom:4px}
@@ -56,14 +56,11 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
   <!-- TRACKER -->
   <div id="trackerView">
     <label>Monthly income</label><input id="income" type="number">
-    <label>Budget cap</label><input id="budget" type="number">
 
     <label>Lifetime savings goal</label>
-    <input id="savingsGoal" type="number" placeholder="Total target">
+    <input id="savingsGoal" type="number" placeholder="Total savings target">
     <div class="progress"><div id="savingsBar" class="progress-bar safe"></div></div>
     <small><span id="savingsPct">0%</span> of goal reached</small>
-
-    <div class="progress"><div id="spendBar" class="progress-bar safe"></div></div>
 
     <button class="dark" onclick="manualSync()">Manual sync month → CSV</button>
   </div>
@@ -90,8 +87,6 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 
 <div class="card">
   <strong>Monthly summary</strong>
-  <p>Remaining this month</p>
-  <div class="remaining-box"><span id="remaining">0</span></div>
   <p>Fixed: <span id="sumFixed">0</span></p>
   <p>Variable: <span id="sumVariable">0</span></p>
   <p>Saved: <span id="sumSaved">0</span></p>
@@ -103,6 +98,8 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 
   <div id="pieChart" class="pie"></div>
   <div id="pieLegend" class="legend"></div>
+
+  <div class="remaining-box">Remaining this month: <span id="remaining">0</span></div>
 </div>
 </div>
 
@@ -114,7 +111,7 @@ function monthData(m){
   if(!store[m]){
     const prev=m.replace(/-(\d+)$/,(_,n)=>`-${String(+n-1).padStart(2,'0')}`);
     const fixed=store[prev]?.expenses?.filter(e=>e.type==='fixed')||[];
-    store[m]={income:0,budget:0,expenses:fixed.map(e=>({...e,locked:true}))};
+    store[m]={income:0,expenses:fixed.map(e=>({...e,locked:true}))};
   }
   return store[m];
 }
@@ -127,7 +124,7 @@ function switchView(v){['tracker','expenses'].forEach(x=>document.getElementById
 
 function render(){
   const d=monthData(currentMonth);
-  income.value=d.income||'';budget.value=d.budget||'';savingsGoal.value=store.savingsGoal||'';
+  income.value=d.income||'';savingsGoal.value=store.savingsGoal||'';
   expenseTable.innerHTML='';
 
   let spent=0,fixed=0,variable=0,savedMonth=0,savedTotal=0;
@@ -152,11 +149,6 @@ function render(){
   sumSaved.textContent=savedMonth.toFixed(2);
   sumTotal.textContent=spent.toFixed(2);
 
-  const cap=d.budget||d.income;
-  const pct=cap?spent/cap:0;
-  spendBar.style.width=Math.min(100,pct*100)+'%';
-  spendBar.className='progress-bar '+(pct>=1?'danger':pct>=.8?'warn':'safe');
-
   const sGoal=store.savingsGoal||1;
   const sPct=Math.min(100,(savedTotal/sGoal)*100);
   savingsBar.style.width=sPct+'%';
@@ -175,7 +167,9 @@ function renderCategoryBudgets(catTotals){
   Object.keys(store.categoryBudgets).forEach(cat=>{
     const spent=catTotals[cat]||0;
     const cap=store.categoryBudgets[cat]||0;
-    categoryBudgets.innerHTML+=`<label>${cat} budget</label><input type="number" value="${cap}" onchange="setCatBudget('${cat}',this.value)"><small>${spent.toFixed(2)} spent</small>`;
+    const pct=cap?spent/cap:0;
+    const color=pct>=1?'danger':pct>=.8?'warn':'safe';
+    categoryBudgets.innerHTML+=`<label>${cat} budget</label><input type="number" value="${cap}" onchange="setCatBudget('${cat}',this.value)"><small>${spent.toFixed(2)} spent</small><div class="progress"><div class="progress-bar ${color}" style="width:${Math.min(100,pct*100)}%"></div></div>`;
   });
 }
 
@@ -191,7 +185,6 @@ function renderPie(catTotals){
 }
 
 income.oninput=()=>{monthData(currentMonth).income=+income.value;render()}
-budget.oninput=()=>{monthData(currentMonth).budget=+budget.value;render()}
 savingsGoal.oninput=()=>{store.savingsGoal=+savingsGoal.value;render()}
 
 function setCatBudget(cat,v){store.categoryBudgets[cat]=+v;render()}
@@ -200,7 +193,7 @@ function addExpense(){if(!expenseName.value||!expenseAmount.value)return;monthDa
 function edit(i,k,v){monthData(currentMonth).expenses[i][k]=k==='amount'?+v:v;render()}
 function del(i){monthData(currentMonth).expenses.splice(i,1);render()}
 
-function manualSync(){const d=monthData(currentMonth);let csv='Month,Income,Budget,Expense,Type,Category,Amount\n';d.expenses.forEach(e=>csv+=`${currentMonth},${d.income},${d.budget},${e.name},${e.type},${e.category||''},${e.amount}\n`);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`expenses-${currentMonth}.csv`;a.click()}
+function manualSync(){const d=monthData(currentMonth);let csv='Month,Income,Expense,Type,Category,Amount\n';d.expenses.forEach(e=>csv+=`${currentMonth},${d.income},${e.name},${e.type},${e.category||''},${e.amount}\n`);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`expenses-${currentMonth}.csv`;a.click()}
 
 render();
 </script>
