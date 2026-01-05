@@ -46,18 +46,6 @@ body {
   padding: 0 20px;
 }
 
-/* --- BRAND HEADER --- */
-.top-brand {
-    margin-bottom: 12px;
-    font-weight: 700; 
-    color: var(--matcha-dark);
-    font-size: 22px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    letter-spacing: -0.5px;
-}
-
 /* --- LAYOUT GRID --- */
 .container {
   display: grid;
@@ -79,7 +67,7 @@ body {
   overflow: hidden; 
 }
 
-/* --- CARD HEADER (Tabs + Controls) --- */
+/* --- CARD HEADER --- */
 .card-header-row {
   display: flex;
   justify-content: space-between;
@@ -91,7 +79,29 @@ body {
 .header-controls {
     display: flex;
     gap: 8px;
+    align-items: center;
 }
+
+/* Status indicator for Sync */
+#syncStatus {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 10px;
+}
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ccc;
+}
+.status-green { background: var(--matcha-dark); }
+.status-yellow { background: #fbc02d; }
+.status-red { background: var(--strawberry-dark); }
+
 
 /* TABS */
 .tabs {
@@ -121,7 +131,7 @@ body {
   font-weight: 600;
 }
 
-/* DROPDOWNS (Month & Currency) */
+/* DROPDOWNS */
 .header-select {
     width: auto;
     border: none;
@@ -137,7 +147,7 @@ body {
 .header-select:focus { outline: none; box-shadow: 0 0 0 2px var(--strawberry-light); }
 
 
-/* --- CONTENT AREAS --- */
+/* --- CONTENT --- */
 .tab-content {
     flex: 1;
     display: flex;
@@ -227,7 +237,7 @@ input:focus, select:focus {
 }
 .btn-delete:hover { background: #ffebee; }
 
-/* --- TABLE (EXPENSES) --- */
+/* --- TABLE --- */
 .table-container {
     height: 100%; 
     border: 1px solid var(--border-color);
@@ -282,7 +292,7 @@ td input:focus, td select:focus {
     box-shadow: none;
 }
 
-/* --- CHARTS & KPIS --- */
+/* --- CHARTS --- */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -319,8 +329,7 @@ td input:focus, td select:focus {
 .chart-wrapper-pie { width: 35%; height: 100%; position: relative; }
 .chart-wrapper-line { width: 65%; height: 100%; position: relative; }
 
-
-/* --- SIDEBAR SUMMARY --- */
+/* --- SIDEBAR --- */
 .sidebar-section { margin-bottom: 24px; }
 
 .summary-item {
@@ -385,19 +394,29 @@ td input:focus, td select:focus {
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-4 { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; }
 
+/* LOADING OVERLAY */
+#loadingOverlay {
+    position: absolute;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(255,255,255,0.9);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    color: var(--matcha-dark);
+}
+
 </style>
 </head>
 
 <body>
 <div class="app">
 
-  <div class="top-brand">
-      Expense tracker 💸
-  </div>
-
   <div class="container">
     
     <div class="main-card">
+        <div id="loadingOverlay">Loading data...</div>
             
         <div class="card-header-row">
             <div class="tabs">
@@ -407,10 +426,17 @@ td input:focus, td select:focus {
             </div>
             
             <div class="header-controls">
+                <div id="syncStatus">
+                    <div class="status-dot status-green" id="statusDot"></div>
+                    <span id="statusText">Ready</span>
+                </div>
+
                 <select id="currencySelect" class="header-select" onchange="changeCurrency()">
                     <option value="kr">SEK (kr)</option>
                     <option value="€">EUR (€)</option>
                     <option value="$">USD ($)</option>
+                    <option value="£">GBP (£)</option>
+                    <option value="₹">INR (₹)</option>
                 </select>
                 <select id="monthSelect" class="header-select" onchange="changeMonth()"></select>
             </div>
@@ -420,11 +446,11 @@ td input:focus, td select:focus {
             <div class="grid-2">
                 <div>
                     <label>Monthly Income</label>
-                    <input id="income" type="number" onchange="saveMeta()" placeholder="e.g. 25000" />
+                    <input id="income" type="number" onchange="debouncedSave()" placeholder="e.g. 25000" />
                 </div>
                 <div>
                     <label>Savings Goal</label>
-                    <input id="savingsGoal" type="number" onchange="saveMeta()" placeholder="e.g. 5000" />
+                    <input id="savingsGoal" type="number" onchange="debouncedSave()" placeholder="e.g. 5000" />
                 </div>
             </div>
 
@@ -453,6 +479,7 @@ td input:focus, td select:focus {
                             <option>Food</option>
                             <option>Fun</option>
                             <option>Travel</option>
+                            <option>Subscriptions</option>
                             <option>Bills</option>
                             <option>Saved</option>
                             <option>Other</option>
@@ -460,7 +487,7 @@ td input:focus, td select:focus {
                     </div>
                 </div>
                 
-                <button class="btn-primary" onclick="addExpense()">+ Add Expense</button>
+                <button id="addBtn" class="btn-primary" onclick="addExpense()">+ Add Expense</button>
             </div>
         </div>
 
@@ -562,13 +589,83 @@ td input:focus, td select:focus {
 </div>
 
 <script>
-// ---------- LOGIC ----------
-let data = JSON.parse(localStorage.getItem("budgetData")) || {};
-let settings = JSON.parse(localStorage.getItem("budgetSettings")) || { currency: "kr" };
-let currentMonth = new Date().toISOString().slice(0,7);
+// ==========================================
+// CONFIG: JSONBLOB.COM SYNC
+// ==========================================
+const BLOB_ID = "019b8fa4-d4f5-7686-9578-441b6079744f"; 
+// ==========================================
 
-// Initialize currency selector
-document.getElementById('currencySelect').value = settings.currency;
+let fullData = {}; 
+let settings = { currency: "kr" };
+let currentMonth = new Date().toISOString().slice(0,7);
+let saveTimeout;
+
+// -- SYNC FUNCTIONS --
+
+function setStatus(state) {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    if(state === 'loading') {
+        dot.className = "status-dot status-yellow";
+        txt.textContent = "Syncing...";
+    } else if (state === 'saved') {
+        dot.className = "status-dot status-green";
+        txt.textContent = "Synced";
+    } else if (state === 'error') {
+        dot.className = "status-dot status-red";
+        txt.textContent = "Error";
+    }
+}
+
+async function loadData() {
+    setStatus('loading');
+    try {
+        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`);
+        if(!res.ok) throw new Error("Load failed");
+        const json = await res.json();
+        
+        // JSONBlob returns the data directly
+        fullData = json.data || {};
+        settings = json.settings || { currency: "kr" };
+        
+        document.getElementById('currencySelect').value = settings.currency;
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        setStatus('saved');
+        render();
+    } catch(e) {
+        console.error(e);
+        setStatus('error');
+        // Fallback to empty if load fails
+        document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+}
+
+async function saveData() {
+    setStatus('loading');
+    try {
+        const payload = { data: fullData, settings: settings };
+        await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
+            method: "PUT",
+            headers: { 
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload)
+        });
+        setStatus('saved');
+    } catch(e) {
+        console.error(e);
+        setStatus('error');
+    }
+}
+
+function debouncedSave() {
+    saveMetaLocally(); 
+    clearTimeout(saveTimeout);
+    setStatus('loading');
+    saveTimeout = setTimeout(saveData, 1500);
+}
+
+// -- APP LOGIC --
 
 function formatMoney(num) {
     if(!num && num !== 0) return "0 " + settings.currency;
@@ -591,13 +688,8 @@ function initMonths(){
 }
 
 function getMonth(){
-  if(!data[currentMonth]) data[currentMonth] = { income: 0, goal: 0, expenses: [] };
-  return data[currentMonth];
-}
-
-function save(){ 
-    localStorage.setItem("budgetData", JSON.stringify(data)); 
-    localStorage.setItem("budgetSettings", JSON.stringify(settings));
+  if(!fullData[currentMonth]) fullData[currentMonth] = { income: 0, goal: 0, expenses: [] };
+  return fullData[currentMonth];
 }
 
 function changeMonth(){ 
@@ -607,16 +699,15 @@ function changeMonth(){
 
 function changeCurrency() {
     settings.currency = document.getElementById('currencySelect').value;
-    save();
+    saveData();
     render();
 }
 
-function saveMeta(){
+function saveMetaLocally(){
   const m = getMonth();
   m.income = +document.getElementById('income').value;
   m.goal = +document.getElementById('savingsGoal').value;
-  save(); 
-  render();
+  render(); 
 }
 
 function addExpense(){
@@ -642,7 +733,7 @@ function addExpense(){
   document.getElementById('inputName').value = "";
   document.getElementById('inputAmount').value = "";
   
-  save(); 
+  saveData(); 
   render();
 }
 
@@ -651,14 +742,18 @@ window.updateExpense = function(index, field, element) {
     let val = element.value;
     if(field === 'amount') val = Number(val);
     m.expenses[index][field] = val;
-    save();
-    render();
+    
+    render(); 
+    
+    clearTimeout(saveTimeout);
+    setStatus('loading');
+    saveTimeout = setTimeout(saveData, 2000); 
 }
 
 function deleteExpense(i){
   if(confirm("Delete this expense?")){
       getMonth().expenses.splice(i,1);
-      save(); 
+      saveData();
       render();
   }
 }
@@ -712,6 +807,7 @@ function render(){
             <option ${e.category=="Food"?"selected":""}>Food</option>
             <option ${e.category=="Fun"?"selected":""}>Fun</option>
             <option ${e.category=="Travel"?"selected":""}>Travel</option>
+            <option ${e.category=="Subscriptions"?"selected":""}>Subscriptions</option>
             <option ${e.category=="Bills"?"selected":""}>Bills</option>
             <option ${e.category=="Saved"?"selected":""}>Saved</option>
             <option ${e.category=="Other"?"selected":""}>Other</option>
@@ -733,7 +829,7 @@ function drawCharts(m){
   const pieCtx = document.getElementById('pieChart').getContext('2d');
   if(pieChartInstance) pieChartInstance.destroy();
   
-  const colors = ["#f48fb1", "#8fc7a4", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0", "#ffecb3"];
+  const colors = ["#f48fb1", "#8fc7a4", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0", "#ffecb3", "#b39ddb"];
 
   pieChartInstance = new Chart(pieCtx, {
       type: "doughnut",
@@ -834,8 +930,9 @@ function exportCSV() {
     a.click();
 }
 
+// Start
 initMonths();
-render();
+loadData(); 
 
 </script>
 </body>
