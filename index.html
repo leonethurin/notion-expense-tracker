@@ -417,7 +417,7 @@ td input:focus, td select:focus {
   <div class="container">
     
     <div class="main-card">
-        <div id="loadingOverlay">Loading data...</div>
+        <div id="loadingOverlay">Connecting...</div>
             
         <div class="card-header-row">
             <div class="tabs">
@@ -591,7 +591,7 @@ td input:focus, td select:focus {
 
 <script>
 // ==========================================
-// CONFIG: JSONBLOB.COM SYNC
+// CONFIG
 // ==========================================
 const BLOB_ID = "019b8fa4-d4f5-7686-9578-441b6079744f"; 
 // ==========================================
@@ -600,8 +600,6 @@ let fullData = {};
 let settings = { currency: "kr" };
 let currentMonth = new Date().toISOString().slice(0,7);
 let saveTimeout;
-
-// -- SYNC FUNCTIONS --
 
 function setStatus(state, msg) {
     const dot = document.getElementById('statusDot');
@@ -621,27 +619,26 @@ function setStatus(state, msg) {
 async function loadData() {
     setStatus('loading');
     try {
-        // Headers are crucial for some browsers/proxies
+        // MAGIC FIX: 'no-referrer' hides the iframe origin so API accepts it
         const res = await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
+            method: 'GET',
+            mode: 'cors',
+            referrerPolicy: 'no-referrer', 
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             }
         });
         
-        if(!res.ok) {
-            if(res.status === 404) throw new Error("ID not found (404)");
-            throw new Error(`Load failed (${res.status})`);
-        }
+        if(!res.ok) throw new Error(`Status ${res.status}`);
 
         const json = await res.json();
         
-        // Handle empty blob case safely
-        if(Object.keys(json).length === 0 && json.constructor === Object) {
+        // Handle init/empty case
+        if(Object.keys(json).length === 0) {
             fullData = {};
             settings = { currency: "kr" };
-            // Auto-init the blob so it's not empty next time
-            saveData();
+            saveData(); // Save structure immediately
         } else {
             fullData = json.data || {};
             settings = json.settings || { currency: "kr" };
@@ -655,8 +652,8 @@ async function loadData() {
     } catch(e) {
         console.error(e);
         document.getElementById('loadingOverlay').classList.add('hidden');
-        setStatus('error', e.message);
-        alert("Sync Error: " + e.message + "\nCheck console for details.");
+        setStatus('error', "Network Error");
+        alert("Sync Error: Could not connect to database.\n" + e.message + "\n(Try disabling ad-blockers for this frame)");
     }
 }
 
@@ -664,8 +661,11 @@ async function saveData() {
     setStatus('loading');
     try {
         const payload = { data: fullData, settings: settings };
-        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
+        
+        await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
             method: "PUT",
+            mode: 'cors',
+            referrerPolicy: 'no-referrer',
             headers: { 
                 "Content-Type": "application/json",
                 "Accept": "application/json"
@@ -673,12 +673,10 @@ async function saveData() {
             body: JSON.stringify(payload)
         });
         
-        if(!res.ok) throw new Error("Save failed " + res.status);
-        
         setStatus('saved');
     } catch(e) {
         console.error(e);
-        setStatus('error', "Save Error");
+        setStatus('error', "Save Failed");
     }
 }
 
