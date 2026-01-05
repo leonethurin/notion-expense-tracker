@@ -2,19 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Notion Expense Tracker</title>
+<title>Notion Budget Buddy</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
 :root {
+  /* STRAWBERRY MATCHA PALETTE */
   --matcha: #8fc7a4;
+  --matcha-dark: #669e7c;
   --matcha-light: #e8f5e9;
+  
   --strawberry: #f48fb1;
+  --strawberry-dark: #d66c8e;
   --strawberry-light: #fce4ec;
+
   --text-main: #37352f;
   --text-light: #787774;
-  --bg-color: #f7f6f3; /* Notion light grey */
+  --bg-color: #f7f6f3; 
   --card-bg: #ffffff;
   --border-color: #e0e0e0;
 }
@@ -52,6 +57,7 @@ body {
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   border: 1px solid rgba(0,0,0,0.05);
+  margin-bottom: 20px;
 }
 
 /* Header & Tabs */
@@ -68,6 +74,8 @@ body {
   background: #f0f0f0;
   padding: 4px;
   border-radius: 8px;
+  width: fit-content;
+  margin-bottom: 20px;
 }
 
 .tabs button {
@@ -131,17 +139,19 @@ label {
 
 /* Action Button */
 .btn-primary {
-  background: var(--text-main); /* Eller Matcha om du vill ha grönt */
+  background: var(--matcha);
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 10px 20px;
+  padding: 12px 20px;
   font-weight: 500;
   cursor: pointer;
   width: 100%;
   margin-top: 10px;
+  font-size: 15px;
+  transition: background 0.2s;
 }
-.btn-primary:hover { opacity: 0.9; }
+.btn-primary:hover { background: var(--matcha-dark); }
 
 .btn-delete {
     background: transparent;
@@ -153,7 +163,7 @@ label {
 }
 .btn-delete:hover { background: #fff0f0; border-radius: 4px; }
 
-/* Dashboard Cards (Top Row) */
+/* Dashboard Cards (KPIs) - Now in Charts Tab */
 .dashboard-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -176,16 +186,20 @@ label {
 
 /* Table Styling */
 .expenses-scroll {
-  max-height: 500px;
+  /* Approx height for 8 rows + header */
+  max-height: 420px; 
   overflow-y: auto;
   border: 1px solid var(--border-color);
   border-radius: 8px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+/* Scrollbar styling for Webkit */
+.expenses-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.expenses-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.expenses-scroll::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+.expenses-scroll::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+table { width: 100%; border-collapse: collapse; }
 
 th {
   background: #f9f9f9;
@@ -197,6 +211,7 @@ th {
   position: sticky;
   top: 0;
   border-bottom: 1px solid var(--border-color);
+  z-index: 2;
 }
 
 td {
@@ -212,18 +227,11 @@ td input, td select {
     font-size: 13px;
     border-radius: 4px;
 }
-td input:hover, td select:hover {
-    background: #f0f0f0;
-}
-td input:focus, td select:focus {
-    background: white;
-    border: 1px solid var(--matcha);
-}
+td input:hover, td select:hover { background: #f0f0f0; }
+td input:focus, td select:focus { background: white; border: 1px solid var(--matcha); }
 
 /* Sidebar Summary */
-.sidebar-section {
-    margin-bottom: 24px;
-}
+.sidebar-section { margin-bottom: 24px; }
 .summary-row {
     display: flex;
     justify-content: space-between;
@@ -231,14 +239,9 @@ td input:focus, td select:focus {
     font-size: 14px;
     color: var(--text-light);
 }
-.summary-row span:last-child {
-    color: var(--text-main);
-    font-weight: 600;
-}
+.summary-row span:last-child { color: var(--text-main); font-weight: 600; }
 
-.progress-container {
-    margin-bottom: 20px;
-}
+.progress-container { margin-bottom: 20px; }
 .progress-label {
     display: flex;
     justify-content: space-between;
@@ -283,8 +286,8 @@ td input:focus, td select:focus {
 <div class="app">
 
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <h2 style="margin:0; display:flex; align-items:center; gap:10px;">
-          <span style="background:var(--matcha); padding:4px 8px; border-radius:6px; color:white; font-size:16px;">Expense</span> 
+      <h2 style="margin:0; display:flex; align-items:center; gap:10px; font-weight: 600; color: var(--matcha-dark);">
+          <span style="background:var(--matcha); padding:4px 8px; border-radius:8px; color:white; font-size:20px;">Expense</span> 
           Tracker
       </h2>
       <select id="monthSelect" onchange="changeMonth()" style="width:auto; font-weight:600; border:none; background:transparent; cursor:pointer; font-size:16px;"></select>
@@ -293,78 +296,63 @@ td input:focus, td select:focus {
   <div class="container">
     
     <div class="main-column">
-        
-        <div class="dashboard-cards">
-            <div class="stat-card bg-matcha">
-                <h4>Income</h4>
-                <strong id="kIncome">0</strong>
-            </div>
-            <div class="stat-card bg-strawberry">
-                <h4>Expenses</h4>
-                <strong id="kExpenses">0</strong>
-            </div>
-            <div class="stat-card bg-matcha" style="background: #a5d6a7;">
-                <h4>Saved</h4>
-                <strong id="kSaved">0</strong>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="header-row">
-                <div class="tabs">
-                    <button class="active" onclick="showTab('track')">Track</button>
-                    <button onclick="showTab('expenses')">Expenses</button>
-                    <button onclick="showTab('charts')">Charts</button>
-                </div>
+        <div class="card" style="min-height: 500px;">
+            
+            <div class="tabs">
+                <button class="active" onclick="showTab('track')">Track</button>
+                <button onclick="showTab('expenses')">Expenses</button>
+                <button onclick="showTab('charts')">Charts</button>
             </div>
 
             <div id="track">
                 <div class="grid-2">
                     <div>
                         <label>Monthly income</label>
-                        <input id="income" type="number" onchange="saveMeta()" placeholder="e.g. 25000" />
+                        <input id="income" type="number" onchange="saveMeta()" placeholder="e.g. 5000" />
                     </div>
                     <div>
                         <label>Savings goal</label>
-                        <input id="savingsGoal" type="number" onchange="saveMeta()" placeholder="e.g. 5000" />
+                        <input id="savingsGoal" type="number" onchange="saveMeta()" placeholder="e.g. 1000" />
                     </div>
                 </div>
 
-                <hr style="border:0; border-top:1px solid #eee; margin: 24px 0;">
-
-                <h3 style="margin-top:0;">Add new expense</h3>
-                <div class="grid-4">
-                    <div>
-                        <label>Name</label>
-                        <input id="inputName" placeholder="Vad köpte du?" />
+                <div style="background: var(--matcha-light); padding: 20px; border-radius: 12px; margin-top: 30px;">
+                    <h3 style="margin-top:0; color: var(--matcha-dark);">Add Expense</h3>
+                    <div class="grid-4">
+                        <div>
+                            <label>Name</label>
+                            <input id="inputName" placeholder="What did you buy?" />
+                        </div>
+                        <div>
+                            <label>Amount</label>
+                            <input id="inputAmount" type="number" placeholder="Cost" />
+                        </div>
+                        <div>
+                            <label>Type</label>
+                            <select id="inputType">
+                                <option>Fixed</option>
+                                <option>Variable</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Category</label>
+                            <select id="inputCategory">
+                                <option>Rent</option>
+                                <option>Food</option>
+                                <option>Fun</option>
+                                <option>Travel</option>
+                                <option>Bills</option>
+                                <option>Saved</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label>Amount</label>
-                        <input id="inputAmount" type="number" placeholder="Pris" />
-                    </div>
-                    <div>
-                        <label>Type</label>
-                        <select id="inputType">
-                            <option>Fixed</option>
-                            <option>Variable</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Category</label>
-                        <select id="inputCategory">
-                            <option>Rent</option>
-                            <option>Food</option>
-                            <option>Fun</option>
-                            <option>Travel</option>
-                            <option>Saved</option>
-                            <option>Other</option>
-                        </select>
-                    </div>
+                    <button class="btn-primary" onclick="addExpense()">+ Add Expense</button>
                 </div>
-                <button class="btn-primary" onclick="addExpense()">Add Expense</button>
             </div>
 
             <div id="expenses" class="hidden">
+                <h3 style="margin-top:0;">Expense History</h3>
                 <div class="expenses-scroll">
                     <table>
                         <thead>
@@ -373,7 +361,7 @@ td input:focus, td select:focus {
                                 <th>Name</th>
                                 <th style="width:100px;">Amount</th>
                                 <th style="width:100px;">Type</th>
-                                <th style="width:100px;">Category</th>
+                                <th style="width:120px;">Category</th>
                                 <th style="width:40px;"></th>
                             </tr>
                         </thead>
@@ -383,6 +371,22 @@ td input:focus, td select:focus {
             </div>
 
             <div id="charts" class="hidden">
+               
+               <div class="dashboard-cards">
+                    <div class="stat-card bg-strawberry">
+                        <h4>Income</h4>
+                        <strong id="kIncome">0</strong>
+                    </div>
+                    <div class="stat-card bg-matcha">
+                        <h4>Expenses</h4>
+                        <strong id="kExpenses">0</strong>
+                    </div>
+                    <div class="stat-card bg-strawberry">
+                        <h4>Saved</h4>
+                        <strong id="kSaved">0</strong>
+                    </div>
+                </div>
+
                <div class="charts-flex">
                    <div class="chart-pie">
                        <canvas id="pieChart"></canvas>
@@ -403,15 +407,15 @@ td input:focus, td select:focus {
             <div class="sidebar-section">
                 <div class="summary-row">
                     <span>Income:</span>
-                    <span id="sIncome">0</span>
+                    <span id="sIncome" style="color:var(--matcha-dark)">0</span>
                 </div>
                 <div class="summary-row">
                     <span>Expenses:</span>
-                    <span id="sExpenses" style="color:#f48fb1">0</span>
+                    <span id="sExpenses" style="color:var(--strawberry-dark)">0</span>
                 </div>
                 <div class="summary-row">
                     <span>Saved:</span>
-                    <span id="sSaved" style="color:#8fc7a4">0</span>
+                    <span id="sSaved" style="color:var(--matcha-dark)">0</span>
                 </div>
             </div>
 
@@ -440,7 +444,7 @@ td input:focus, td select:focus {
                 <strong id="remaining">0.00</strong>
             </div>
 
-            <button style="margin-top:20px; width:100%; background:white; border:1px solid #ddd; padding:8px; border-radius:6px; cursor:pointer; font-size:13px;" onclick="exportCSV()">
+            <button style="margin-top:20px; width:100%; background:white; border:1px solid #ddd; padding:8px; border-radius:6px; cursor:pointer; font-size:13px; color:var(--text-light)" onclick="exportCSV()">
                 ⬇ Export to CSV
             </button>
         </div>
@@ -454,11 +458,9 @@ td input:focus, td select:focus {
 let data = JSON.parse(localStorage.getItem("budgetData")) || {};
 let currentMonth = new Date().toISOString().slice(0,7);
 
-// Init Month Dropdown
 function initMonths(){
   const sel = document.getElementById('monthSelect');
   sel.innerHTML = "";
-  // Visar nuvarande månad + 5 månader bakåt
   for(let i=0; i<6; i++){
     const d = new Date();
     d.setMonth(d.getMonth() - i);
@@ -492,7 +494,6 @@ function saveMeta(){
 }
 
 function addExpense(){
-  // FIX: Använder specifika IDn för att undvika "undefined"
   const nameVal = document.getElementById('inputName').value;
   const amountVal = document.getElementById('inputAmount').value;
   const typeVal = document.getElementById('inputType').value;
@@ -512,7 +513,6 @@ function addExpense(){
     date: new Date().toISOString().slice(0,10)
   });
 
-  // Töm fält
   document.getElementById('inputName').value = "";
   document.getElementById('inputAmount').value = "";
   
@@ -520,16 +520,13 @@ function addExpense(){
   render();
 }
 
-// FIX: Global funktion för att uppdatera enskild expense i listan
-// Detta löser problemet med att ändringar inte sparades
 window.updateExpense = function(index, field, element) {
     const m = getMonth();
     let val = element.value;
     if(field === 'amount') val = Number(val);
-    
     m.expenses[index][field] = val;
     save();
-    render(); // Rita om för att uppdatera grafer och summor
+    render();
 }
 
 function deleteExpense(i){
@@ -545,7 +542,7 @@ let pieChartInstance, lineChartInstance;
 function render(){
   const m = getMonth();
   
-  // Update Inputs if empty (avoid overwriting while typing if possible, but simplicity first)
+  // Update Inputs
   if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
   if(document.activeElement.id !== 'savingsGoal') document.getElementById('savingsGoal').value = m.goal || "";
 
@@ -576,7 +573,6 @@ function render(){
   document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
 
   // Render Table
-  // NOTERA: Här anropar vi updateExpense() istället för att försöka nå m.expenses direkt i HTML strängen
   const tbody = document.getElementById('expenseTable');
   tbody.innerHTML = m.expenses.map((e, i) => `
     <tr>
@@ -595,6 +591,7 @@ function render(){
             <option ${e.category=="Food"?"selected":""}>Food</option>
             <option ${e.category=="Fun"?"selected":""}>Fun</option>
             <option ${e.category=="Travel"?"selected":""}>Travel</option>
+            <option ${e.category=="Bills"?"selected":""}>Bills</option>
             <option ${e.category=="Saved"?"selected":""}>Saved</option>
             <option ${e.category=="Other"?"selected":""}>Other</option>
         </select>
@@ -621,17 +618,17 @@ function drawCharts(m){
           labels: Object.keys(cats),
           datasets: [{
               data: Object.values(cats),
-              backgroundColor: ["#8fc7a4", "#f48fb1", "#ffd54f", "#64b5f6", "#e0e0e0"],
+              // Strawberry Matcha palette
+              backgroundColor: ["#8fc7a4", "#f48fb1", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0"],
               borderWidth: 0
           }]
       },
       options: { responsive: true, maintainAspectRatio: false }
   });
 
-  // Line Data (Cumulative)
+  // Line Data
   let cum = 0;
   let vals = [];
-  // Sortera datum för linjegrafen
   const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
   
   sortedExp.forEach(e => {
@@ -644,8 +641,6 @@ function drawCharts(m){
   const lineCtx = document.getElementById('lineChart').getContext('2d');
   if(lineChartInstance) lineChartInstance.destroy();
   
-  // Enkel linjegraf baserad på antal utgifter (index) för demo. 
-  // För riktig tidsserie behövs datum-adaptrar i Chart.js, men detta funkar för enkelhet.
   const labels = vals.map((_, i) => i + 1); 
   const dataPoints = vals.map(v => v.y);
 
@@ -657,7 +652,7 @@ function drawCharts(m){
             {
               label: "Spending",
               data: dataPoints,
-              borderColor: "#f48fb1",
+              borderColor: "#f48fb1", // Strawberry line
               tension: 0.4,
               fill: true,
               backgroundColor: "rgba(244, 143, 177, 0.1)"
@@ -665,7 +660,7 @@ function drawCharts(m){
             {
                 label: "Income Limit",
                 data: labels.map(() => m.income),
-                borderColor: "#8fc7a4",
+                borderColor: "#8fc7a4", // Matcha line
                 borderDash: [5, 5],
                 pointRadius: 0,
                 borderWidth: 2
@@ -682,7 +677,6 @@ function drawCharts(m){
 
 function showTab(id){
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
-  // Hitta knappen som klickades på genom eventet
   const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
   if(btn) btn.classList.add("active");
   else if(event) event.target.classList.add("active");
@@ -692,6 +686,9 @@ function showTab(id){
   document.getElementById('charts').classList.add("hidden");
   
   document.getElementById(id).classList.remove("hidden");
+  
+  // Re-render chart if opening charts tab to ensure size is correct
+  if(id === 'charts') render();
 }
 
 function exportCSV() {
