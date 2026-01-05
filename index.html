@@ -61,7 +61,7 @@ body {
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.04);
-  height: 510px; 
+  height: 560px; /* Lite högre för att få plats med nya fält */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -374,14 +374,12 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
       <input type="text" id="pantryIdInput" class="setup-input" placeholder="Paste ID here..." />
       <button class="btn-primary" style="width:300px" onclick="savePantryId()">Start Tracking</button>
-      
       <button id="cancelSetupBtn" class="btn-secondary hidden" style="width:300px" onclick="closeSetup()">Cancel</button>
   </div>
 
   <div id="loadingOverlay" class="overlay-screen hidden">
       <h3 style="color:var(--matcha-dark)">Syncing...</h3>
       <div id="loadingMsg" style="font-size:12px; color:#999; margin-top:5px;">Checking Pantry ID...</div>
-      
       <a class="reset-link" onclick="forceReset()">Stuck? Click here to enter ID</a>
   </div>
 
@@ -420,8 +418,18 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
                     <input id="income" type="number" onchange="debouncedSave()" placeholder="e.g. 25000" />
                 </div>
                 <div>
-                    <label>Savings Goal</label>
-                    <input id="savingsGoal" type="number" onchange="debouncedSave()" placeholder="e.g. 5000" />
+                    <label>Monthly Budget (Spending Limit)</label>
+                    <input id="monthlyBudget" type="number" onchange="debouncedSave()" placeholder="e.g. 15000" />
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top:16px;">
+                 <div>
+                    <label>Monthly Savings Goal</label>
+                    <input id="monthlySavingsGoal" type="number" onchange="debouncedSave()" placeholder="e.g. 5000" />
+                </div>
+                <div>
+                    <label>Longterm Savings Goal</label>
+                    <input id="longtermSavingsGoal" type="number" onchange="debouncedSave()" placeholder="Total target" />
                 </div>
             </div>
 
@@ -540,7 +548,7 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
         <div class="progress-group">
             <div class="progress-header">
-                <span>Savings Goal</span>
+                <span>Longterm Goal Progress</span>
                 <span id="goalText">0%</span>
             </div>
             <div class="progress-track">
@@ -572,7 +580,6 @@ let currentMonth = new Date().toISOString().slice(0,7);
 let saveTimeout;
 
 // -- INIT --
-// Force run this immediately to ensure UI is visible
 initMonths();
 initApp();
 
@@ -580,7 +587,7 @@ function initApp() {
     if(!userPantryId || userPantryId === "null" || userPantryId === "undefined") {
         document.getElementById('setupScreen').classList.remove('hidden');
         document.getElementById('loadingOverlay').classList.add('hidden');
-        document.getElementById('cancelSetupBtn').classList.add('hidden'); // Cannot cancel if no ID exists
+        document.getElementById('cancelSetupBtn').classList.add('hidden');
     } else {
         loadData();
     }
@@ -607,10 +614,8 @@ function savePantryId() {
 }
 
 function openSetup() {
-    // Removed confirm() dialog to prevent Notion blocking it
     document.getElementById('pantryIdInput').value = userPantryId || "";
     document.getElementById('setupScreen').classList.remove('hidden');
-    // Show cancel button since we have an ID (changing existing one)
     document.getElementById('cancelSetupBtn').classList.remove('hidden');
 }
 
@@ -634,7 +639,6 @@ async function loadData() {
         const res = await fetch(url);
         
         if(!res.ok) {
-            // New user or bad ID
             console.log("Basket not found, creating...");
             const initSuccess = await createInitialBasket();
             if(initSuccess) {
@@ -658,7 +662,6 @@ async function loadData() {
 
     } catch(e) {
         console.error(e);
-        // If failed, show alert in loading screen
         document.getElementById('loadingMsg').innerText = "Connection failed. Check ID.";
         setStatus('error');
     }
@@ -715,7 +718,7 @@ function formatMoney(num) {
 
 function initMonths(){
   const sel = document.getElementById('monthSelect');
-  if(!sel) return; // Safety check
+  if(!sel) return;
   sel.innerHTML = "";
   for(let i=0; i<6; i++){
     const d = new Date();
@@ -730,7 +733,7 @@ function initMonths(){
 }
 
 function getMonth(){
-  if(!fullData[currentMonth]) fullData[currentMonth] = { income: 0, goal: 0, expenses: [] };
+  if(!fullData[currentMonth]) fullData[currentMonth] = { income: 0, monthlyBudget: 0, monthlySavingsGoal: 0, longtermSavingsGoal: 0, expenses: [] };
   return fullData[currentMonth];
 }
 
@@ -748,7 +751,9 @@ function changeCurrency() {
 function saveMetaLocally(){
   const m = getMonth();
   m.income = +document.getElementById('income').value;
-  m.goal = +document.getElementById('savingsGoal').value;
+  m.monthlyBudget = +document.getElementById('monthlyBudget').value;
+  m.monthlySavingsGoal = +document.getElementById('monthlySavingsGoal').value;
+  m.longtermSavingsGoal = +document.getElementById('longtermSavingsGoal').value;
   render(); 
 }
 
@@ -803,13 +808,18 @@ let pieChartInstance, lineChartInstance;
 function render(){
   const m = getMonth();
   
+  // Fill inputs if not focused
   if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
-  if(document.activeElement.id !== 'savingsGoal') document.getElementById('savingsGoal').value = m.goal || "";
+  if(document.activeElement.id !== 'monthlyBudget') document.getElementById('monthlyBudget').value = m.monthlyBudget || "";
+  if(document.activeElement.id !== 'monthlySavingsGoal') document.getElementById('monthlySavingsGoal').value = m.monthlySavingsGoal || "";
+  if(document.activeElement.id !== 'longtermSavingsGoal') document.getElementById('longtermSavingsGoal').value = m.longtermSavingsGoal || "";
 
+  // Calculations
   let totalExp = m.expenses.filter(e => e.category !== "Saved").reduce((a,b) => a + b.amount, 0);
   let totalSaved = m.expenses.filter(e => e.category === "Saved").reduce((a,b) => a + b.amount, 0);
   let remainingVal = m.income - totalExp - totalSaved;
 
+  // Sidebar Updates
   document.getElementById('kIncome').textContent = formatMoney(m.income);
   document.getElementById('sIncome').textContent = formatMoney(m.income);
   
@@ -821,14 +831,17 @@ function render(){
 
   document.getElementById('remaining').textContent = formatMoney(remainingVal.toFixed(2));
 
+  // Progress Bars
   const incomePct = m.income ? Math.min((totalExp / m.income) * 100, 100) : 0;
   document.getElementById('incomeBar').style.width = incomePct + "%";
   document.getElementById('incomeUsageText').textContent = incomePct.toFixed(0) + "% used";
 
-  const goalPct = m.goal ? Math.min((totalSaved / m.goal) * 100, 100) : 0;
+  // Longterm Goal Logic (Saved / Longterm Goal)
+  const goalPct = m.longtermSavingsGoal ? Math.min((totalSaved / m.longtermSavingsGoal) * 100, 100) : 0;
   document.getElementById('saveBar').style.width = goalPct + "%";
   document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
 
+  // Table
   const tbody = document.getElementById('expenseTable');
   tbody.innerHTML = m.expenses.map((e, i) => `
     <tr>
@@ -861,6 +874,7 @@ function render(){
 }
 
 function drawCharts(m){
+  // Pie Chart (Categories)
   const cats = {};
   m.expenses.filter(e => e.category !== "Saved").forEach(e => {
       cats[e.category] = (cats[e.category] || 0) + e.amount;
@@ -889,46 +903,78 @@ function drawCharts(m){
       }
   });
 
-  let cum = 0;
-  let vals = [];
+  // Line Chart Logic
+  // We need to plot two lines: Cumulative Expenses vs Monthly Budget
+  // And arguably separate: Cumulative Savings vs Monthly Savings Goal (User requested line for savings)
+  
   const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
   
+  // Create cumulative arrays
+  let cumExp = 0;
+  let cumSave = 0;
+  let expPoints = [];
+  let savePoints = [];
+  
   sortedExp.forEach(e => {
-      if(e.category !== "Saved"){
-          cum += e.amount;
-          vals.push({x: e.date, y: cum});
+      if(e.category === "Saved") {
+          cumSave += e.amount;
+          savePoints.push({x: e.date, y: cumSave});
+      } else {
+          cumExp += e.amount;
+          expPoints.push({x: e.date, y: cumExp});
       }
   });
 
   const lineCtx = document.getElementById('lineChart').getContext('2d');
   if(lineChartInstance) lineChartInstance.destroy();
   
-  const labels = vals.map((_, i) => i + 1); 
-  const dataPoints = vals.map(v => v.y);
+  // Generate labels (1 to 31 or based on dates)
+  // For simplicity, we stick to data points but ensure X-axis is shared
+  // We will map based on index for simplicity in this version, or dates
+  // Let's use simple index-based for visual clarity in this layout
+  const allPoints = [...expPoints, ...savePoints].sort((a,b) => new Date(a.x) - new Date(b.x));
+  const labels = allPoints.map(p => p.x.slice(8,10)); // Just the day
 
   lineChartInstance = new Chart(lineCtx, {
       type: "line",
       data: {
-          labels: labels,
+          labels: labels, // This is approx, strictly usually we generate 1-31
           datasets: [
             {
               label: "Spending",
-              data: dataPoints,
-              borderColor: "#f48fb1", 
+              data: expPoints,
+              borderColor: "#f48fb1", // Pink
+              backgroundColor: "rgba(244, 143, 177, 0.1)",
               borderWidth: 2,
-              tension: 0.4,
-              fill: true,
-              backgroundColor: "rgba(244, 143, 177, 0.15)", 
-              pointBackgroundColor: "#f48fb1",
-              pointRadius: 3
+              tension: 0.3,
+              fill: true
             },
             {
-                label: "Limit",
-                data: labels.map(() => m.income),
-                borderColor: "#8fc7a4",
-                borderDash: [5, 5],
-                pointRadius: 0,
-                borderWidth: 1.5
+              label: "Budget Limit",
+              data: expPoints.map(() => m.monthlyBudget),
+              borderColor: "#f48fb1", // Pink dashed
+              borderDash: [5, 5],
+              borderWidth: 1,
+              pointRadius: 0,
+              fill: false
+            },
+            {
+              label: "Savings",
+              data: savePoints,
+              borderColor: "#669e7c", // Green
+              backgroundColor: "rgba(102, 158, 124, 0.1)",
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true
+            },
+            {
+              label: "Savings Goal",
+              data: savePoints.map(() => m.monthlySavingsGoal),
+              borderColor: "#669e7c", // Green dashed
+              borderDash: [5, 5],
+              borderWidth: 1,
+              pointRadius: 0,
+              fill: false
             }
           ]
       },
@@ -939,7 +985,7 @@ function drawCharts(m){
               y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: {size: 10} } },
               x: { grid: { display: false } }
           },
-          plugins: { legend: { display: false } }
+          plugins: { legend: { display: false } } // Hide legend to keep it clean
       }
   });
 }
