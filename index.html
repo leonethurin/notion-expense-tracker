@@ -21,13 +21,18 @@ body {
   font-family: system-ui, sans-serif;
   background: #fafafa;
   margin: 0;
-  padding: 40px 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .app {
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 24px;
+  width: 100%;
 }
 
 .container {
@@ -170,19 +175,25 @@ td, th {
 
 .chart-grid {
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
+  grid-template-columns: auto 1fr;
   gap: 16px;
+  align-items: start;
 }
 
 .chart-box {
-  background: var(--soft-bg);
+  background: transparent;
   border-radius: 16px;
   padding: 12px;
-  height: 320px;
+}
+
+.chart-box:nth-child(1) {
+  width: 300px;
+  height: 300px;
 }
 
 .chart-box:nth-child(2) {
-  height: 320px;
+  height: 400px;
+  min-width: 400px;
 }
 
 canvas {
@@ -372,12 +383,12 @@ function render(){
 
   expenseTable.innerHTML = m.expenses.map(e=>`
     <tr>
-      <td><input type="date" value="${e.date}" onchange="e.date=this.value;save()"></td>
-      <td><input value="${e.name}" onchange="e.name=this.value;save()"></td>
+      <td><input type="date" value="${e.date}" onchange="e.date=this.value;save();render()"></td>
+      <td><input value="${e.name}" onchange="e.name=this.value;save();render()"></td>
       <td><input type="number" value="${e.amount}" onchange="e.amount=+this.value;save();render()"></td>
-      <td><select onchange="e.type=this.value;save()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
-      <td><select onchange="e.category=this.value;save();render()"><option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option><option>Saved</option></select></td>
-      <td><button onclick="m.expenses=m.expenses.filter(x=>x.id!==${e.id});save();render()">✕</button></td>
+      <td><select onchange="e.type=this.value;save();render()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
+      <td><select onchange="e.category=this.value;save();render()"><option ${e.category=="Rent"?"selected":""}>Rent</option><option ${e.category=="Food"?"selected":""}>Food</option><option ${e.category=="Fun"?"selected":""}>Fun</option><option ${e.category=="Travel"?"selected":""}>Travel</option><option ${e.category=="Saved"?"selected":""}>Saved</option></select></td>
+      <td><button onclick="m.expenses.splice(m.expenses.findIndex(x=>x.id===${e.id}),1);save();render()">✕</button></td>
     </tr>`).join("");
 
   drawCharts(m);
