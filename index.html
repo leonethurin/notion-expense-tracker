@@ -45,6 +45,7 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
   <div class="tabs">
     <div class="tab active" onclick="switchView('track')">Track</div>
     <div class="tab" onclick="switchView('edit')">Edit expenses</div>
+    <div class="tab" onclick="switchView('charts')">Charts</div>
   </div>
 
   <!-- TRACK VIEW -->
@@ -53,44 +54,45 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
       <div>
         <label>Monthly income</label>
         <input id="income" type="number">
+
+        <label style="margin-top:10px">Expense name</label>
+        <div class="grid-2">
+          <input id="expenseName" placeholder="e.g. Groceries">
+          <input id="expenseAmount" type="number" placeholder="Amount">
+        </div>
+
+        <div class="grid-2">
+          <div>
+            <label>Type</label>
+            <select id="expenseType">
+              <option value="fixed">Fixed</option>
+              <option value="variable">Variable</option>
+            </select>
+          </div>
+          <div>
+            <label>Category</label>
+            <select id="expenseCategory">
+              <option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option><option>Bills</option><option>Saved</option>
+            </select>
+          </div>
+        </div>
+
+        <button onclick="addExpense()">Add expense</button>
       </div>
-      <div>
-        <label>Savings goal</label>
-        <input id="savingsGoal" type="number" placeholder="Savings target">
+
+      <!-- MONTHLY SUMMARY -->
+      <div class="card">
+        <h3>Monthly summary</h3>
+        <small>Income usage</small>
+        <div class="progress"><div id="incomeBar" class="progress-bar safe"></div></div>
+
+        <small>Savings goal</small>
+        <div class="progress"><div id="savingsBar" class="progress-bar safe"></div></div>
+
+        <div class="remaining-box" style="margin-top:10px">Remaining this month: <span id="remaining">0</span></div>
+        <button class="matcha small" style="width:100%;margin-top:6px" onclick="manualSync()">Manual sync month → CSV</button>
       </div>
     </div>
-
-    <label>Expense name</label>
-    <div class="grid-2">
-      <input id="expenseName" placeholder="e.g. Groceries">
-      <input id="expenseAmount" type="number" placeholder="Amount">
-    </div>
-
-    <div class="grid-2">
-      <div>
-        <label>Type</label>
-        <select id="expenseType">
-          <option value="fixed">Fixed</option>
-          <option value="variable">Variable</option>
-        </select>
-      </div>
-      <div>
-        <label>Category</label>
-        <select id="expenseCategory">
-          <option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option><option>Bills</option><option>Saved</option>
-        </select>
-      </div>
-    </div>
-
-    <button onclick="addExpense()">Add expense</button>
-
-    <small>Monthly income usage</small>
-    <div class="progress"><div id="incomeBar" class="progress-bar safe"></div></div>
-
-    <small>Savings progress</small>
-    <div class="progress"><div id="savingsBar" class="progress-bar safe"></div></div>
-
-    <button class="matcha" style="width:100%;margin-top:10px" onclick="manualSync()">Manual sync month → CSV</button>
   </div>
 
   <!-- EDIT VIEW -->
@@ -101,7 +103,12 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
     </table>
   </div>
 
-  <div class="remaining-box">Remaining this month: <span id="remaining">0</span></div>
+  <!-- CHARTS VIEW -->
+  <div id="chartsView" class="hidden">
+    <h3>Overview</h3>
+    <canvas id="categoryPie" height="200"></canvas>
+    <canvas id="trendChart" height="200" style="margin-top:16px"></canvas>
+  </div>
 </div>
 
 <script>
