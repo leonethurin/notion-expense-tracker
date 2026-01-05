@@ -91,7 +91,7 @@ body {
     align-items: center;
     gap: 6px;
     margin-right: 10px;
-    cursor: help;
+    cursor: pointer;
 }
 .status-dot {
     width: 8px;
@@ -399,13 +399,30 @@ td input:focus, td select:focus {
 #loadingOverlay {
     position: absolute;
     top:0; left:0; width:100%; height:100%;
-    background: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.95);
     z-index: 100;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     font-weight: 600;
     color: var(--matcha-dark);
+    text-align: center;
+    padding: 20px;
+}
+#errorMsg {
+    color: var(--strawberry-dark);
+    font-size: 12px;
+    margin-top: 10px;
+    max-width: 300px;
+}
+.retry-btn {
+    margin-top: 15px;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 </style>
@@ -417,7 +434,11 @@ td input:focus, td select:focus {
   <div class="container">
     
     <div class="main-card">
-        <div id="loadingOverlay">Connecting...</div>
+        <div id="loadingOverlay">
+            <div id="loadingText">Connecting to cloud...</div>
+            <div id="errorMsg"></div>
+            <button class="retry-btn hidden" onclick="loadData()">Retry</button>
+        </div>
             
         <div class="card-header-row">
             <div class="tabs">
@@ -427,7 +448,7 @@ td input:focus, td select:focus {
             </div>
             
             <div class="header-controls">
-                <div id="syncStatus">
+                <div id="syncStatus" title="Status">
                     <div class="status-dot status-yellow" id="statusDot"></div>
                     <span id="statusText">Connecting...</span>
                 </div>
@@ -593,9 +614,8 @@ td input:focus, td select:focus {
 // ==========================================
 // CONFIG: PANTRY.CLOUD
 // ==========================================
-// Klistra in ditt ID här
 const PANTRY_ID = "e310a436-de14-49f9-ad1b-7c455a16c227"; 
-const BASKET_NAME = "expenseTracker"; // Valfritt namn på 'lådan'
+const BASKET_NAME = "expenseTracker"; 
 // ==========================================
 
 let fullData = {}; 
@@ -619,32 +639,50 @@ function setStatus(state, msg) {
 }
 
 async function loadData() {
-    if(PANTRY_ID.includes("HÄR")) {
-        // Fallback om inget ID angetts än
-        fullData = JSON.parse(localStorage.getItem("budgetData")) || {};
-        settings = JSON.parse(localStorage.getItem("budgetSettings")) || { currency: "kr" };
-        document.getElementById('loadingOverlay').classList.add('hidden');
-        document.getElementById('currencySelect').value = settings.currency;
-        setStatus('saved');
-        render();
+    // 1. Check if ID is set
+    if(PANTRY_ID.includes("HÄR") || PANTRY_ID.length < 5) {
+        document.getElementById('loadingText').textContent = "ID Missing";
+        document.getElementById('errorMsg').textContent = "Replace 'DITT_PANTRY_ID_HÄR' in code.";
+        // Fallback to LocalStorage so user can see UI
+        setTimeout(() => {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            fullData = JSON.parse(localStorage.getItem("budgetData")) || {};
+            settings = JSON.parse(localStorage.getItem("budgetSettings")) || { currency: "kr" };
+            render();
+            setStatus('error', "No ID");
+        }, 1500);
         return;
     }
 
     setStatus('loading');
+    
+    // 2. Try Fetch
     try {
-        // Pantry uses a simple GET request
-        const res = await fetch(`https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`);
+        const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
+        const res = await fetch(url);
         
+        // 3. Handle Basket Not Found (New User)
         if(!res.ok) {
-            // If basket doesn't exist yet (new pantry), it might return error, assume empty
-            console.log("Basket might be empty or new");
-            fullData = {};
-            settings = { currency: "kr" };
-        } else {
-            const json = await res.json();
-            fullData = json.data || {};
-            settings = json.settings || { currency: "kr" };
+            // If it's a 400/404/500, we might need to initialize
+            console.warn("Fetch failed, status:", res.status);
+            
+            // Assume it's a new basket and try to create it immediately
+            const initSuccess = await createInitialBasket();
+            if(initSuccess) {
+                // If creation worked, we are good to go with empty data
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                setStatus('saved');
+                render();
+                return;
+            } else {
+                throw new Error("Could not init basket (" + res.status + ")");
+            }
         }
+
+        // 4. Success Parse
+        const json = await res.json();
+        fullData = json.data || {};
+        settings = json.settings || { currency: "kr" };
         
         document.getElementById('currencySelect').value = settings.currency;
         document.getElementById('loadingOverlay').classList.add('hidden');
@@ -653,32 +691,58 @@ async function loadData() {
 
     } catch(e) {
         console.error(e);
-        document.getElementById('loadingOverlay').classList.add('hidden');
-        setStatus('error', "Network Error");
-        alert("Could not connect to Pantry. Check your ID.");
+        document.getElementById('loadingText').textContent = "Connection Failed";
+        document.getElementById('errorMsg').textContent = e.message;
+        document.querySelector('.retry-btn').classList.remove('hidden');
+        setStatus('error', "Net Error");
+    }
+}
+
+// Helper to create basket if it doesn't exist
+async function createInitialBasket() {
+    try {
+        console.log("Attempting to create/reset basket...");
+        const payload = { data: {}, settings: { currency: "kr" } };
+        const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
+        
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        
+        if(res.ok) {
+            fullData = {};
+            settings = { currency: "kr" };
+            return true;
+        }
+        return false;
+    } catch(e) {
+        console.error("Init failed", e);
+        return false;
     }
 }
 
 async function saveData() {
+    // If no ID, use LocalStorage
     if(PANTRY_ID.includes("HÄR")) {
         localStorage.setItem("budgetData", JSON.stringify(fullData)); 
         localStorage.setItem("budgetSettings", JSON.stringify(settings));
-        render();
         return;
     }
 
     setStatus('loading');
     try {
         const payload = { data: fullData, settings: settings };
+        const url = `https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`;
         
-        // Pantry uses POST to update/replace basket content
-        await fetch(`https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`, {
+        const res = await fetch(url, {
             method: "POST",
-            headers: { 
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
+        
+        if(!res.ok) throw new Error("Save Status: " + res.status);
         
         setStatus('saved');
     } catch(e) {
@@ -871,3 +935,98 @@ function drawCharts(m){
               hoverOffset: 4
           }]
       },
+      options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } } 
+      }
+  });
+
+  let cum = 0;
+  let vals = [];
+  const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
+  
+  sortedExp.forEach(e => {
+      if(e.category !== "Saved"){
+          cum += e.amount;
+          vals.push({x: e.date, y: cum});
+      }
+  });
+
+  const lineCtx = document.getElementById('lineChart').getContext('2d');
+  if(lineChartInstance) lineChartInstance.destroy();
+  
+  const labels = vals.map((_, i) => i + 1); 
+  const dataPoints = vals.map(v => v.y);
+
+  lineChartInstance = new Chart(lineCtx, {
+      type: "line",
+      data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Spending",
+              data: dataPoints,
+              borderColor: "#f48fb1", 
+              borderWidth: 2,
+              tension: 0.4,
+              fill: true,
+              backgroundColor: "rgba(244, 143, 177, 0.15)", 
+              pointBackgroundColor: "#f48fb1",
+              pointRadius: 3
+            },
+            {
+                label: "Limit",
+                data: labels.map(() => m.income),
+                borderColor: "#8fc7a4",
+                borderDash: [5, 5],
+                pointRadius: 0,
+                borderWidth: 1.5
+            }
+          ]
+      },
+      options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          scales: { 
+              y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: {size: 10} } },
+              x: { grid: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+      }
+  });
+}
+
+function showTab(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
+  if(btn) btn.classList.add("active");
+  else if(event) event.target.classList.add("active");
+
+  document.querySelectorAll('.tab-content').forEach(d => d.classList.add('hidden'));
+  document.getElementById(id).classList.remove("hidden");
+  
+  if(id === 'charts') render();
+}
+
+function exportCSV() {
+    const m = getMonth();
+    let csv = "Date,Name,Amount,Type,Category\n";
+    m.expenses.forEach(e => {
+        csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `budget_${currentMonth}.csv`;
+    a.click();
+}
+
+// Start
+initMonths();
+loadData(); 
+
+</script>
+</body>
+</html>
