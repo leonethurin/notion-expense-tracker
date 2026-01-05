@@ -591,9 +591,11 @@ td input:focus, td select:focus {
 
 <script>
 // ==========================================
-// CONFIG
+// CONFIG: PANTRY.CLOUD
 // ==========================================
-const BLOB_ID = "019b8fa4-d4f5-7686-9578-441b6079744f"; 
+// Klistra in ditt ID här
+const PANTRY_ID = "e310a436-de14-49f9-ad1b-7c455a16c227"; 
+const BASKET_NAME = "expenseTracker"; // Valfritt namn på 'lådan'
 // ==========================================
 
 let fullData = {}; 
@@ -617,29 +619,29 @@ function setStatus(state, msg) {
 }
 
 async function loadData() {
+    if(PANTRY_ID.includes("HÄR")) {
+        // Fallback om inget ID angetts än
+        fullData = JSON.parse(localStorage.getItem("budgetData")) || {};
+        settings = JSON.parse(localStorage.getItem("budgetSettings")) || { currency: "kr" };
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('currencySelect').value = settings.currency;
+        setStatus('saved');
+        render();
+        return;
+    }
+
     setStatus('loading');
     try {
-        // MAGIC FIX: 'no-referrer' hides the iframe origin so API accepts it
-        const res = await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
-            method: 'GET',
-            mode: 'cors',
-            referrerPolicy: 'no-referrer', 
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        });
+        // Pantry uses a simple GET request
+        const res = await fetch(`https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`);
         
-        if(!res.ok) throw new Error(`Status ${res.status}`);
-
-        const json = await res.json();
-        
-        // Handle init/empty case
-        if(Object.keys(json).length === 0) {
+        if(!res.ok) {
+            // If basket doesn't exist yet (new pantry), it might return error, assume empty
+            console.log("Basket might be empty or new");
             fullData = {};
             settings = { currency: "kr" };
-            saveData(); // Save structure immediately
         } else {
+            const json = await res.json();
             fullData = json.data || {};
             settings = json.settings || { currency: "kr" };
         }
@@ -653,22 +655,27 @@ async function loadData() {
         console.error(e);
         document.getElementById('loadingOverlay').classList.add('hidden');
         setStatus('error', "Network Error");
-        alert("Sync Error: Could not connect to database.\n" + e.message + "\n(Try disabling ad-blockers for this frame)");
+        alert("Could not connect to Pantry. Check your ID.");
     }
 }
 
 async function saveData() {
+    if(PANTRY_ID.includes("HÄR")) {
+        localStorage.setItem("budgetData", JSON.stringify(fullData)); 
+        localStorage.setItem("budgetSettings", JSON.stringify(settings));
+        render();
+        return;
+    }
+
     setStatus('loading');
     try {
         const payload = { data: fullData, settings: settings };
         
-        await fetch(`https://jsonblob.com/api/jsonBlob/${BLOB_ID}`, {
-            method: "PUT",
-            mode: 'cors',
-            referrerPolicy: 'no-referrer',
+        // Pantry uses POST to update/replace basket content
+        await fetch(`https://getpantry.cloud/apiv1/pantry/${PANTRY_ID}/basket/${BASKET_NAME}`, {
+            method: "POST",
             headers: { 
-                "Content-Type": "application/json",
-                "Accept": "application/json"
+                "Content-Type": "application/json"
             },
             body: JSON.stringify(payload)
         });
@@ -864,98 +871,3 @@ function drawCharts(m){
               hoverOffset: 4
           }]
       },
-      options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } } 
-      }
-  });
-
-  let cum = 0;
-  let vals = [];
-  const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
-  
-  sortedExp.forEach(e => {
-      if(e.category !== "Saved"){
-          cum += e.amount;
-          vals.push({x: e.date, y: cum});
-      }
-  });
-
-  const lineCtx = document.getElementById('lineChart').getContext('2d');
-  if(lineChartInstance) lineChartInstance.destroy();
-  
-  const labels = vals.map((_, i) => i + 1); 
-  const dataPoints = vals.map(v => v.y);
-
-  lineChartInstance = new Chart(lineCtx, {
-      type: "line",
-      data: {
-          labels: labels,
-          datasets: [
-            {
-              label: "Spending",
-              data: dataPoints,
-              borderColor: "#f48fb1", 
-              borderWidth: 2,
-              tension: 0.4,
-              fill: true,
-              backgroundColor: "rgba(244, 143, 177, 0.15)", 
-              pointBackgroundColor: "#f48fb1",
-              pointRadius: 3
-            },
-            {
-                label: "Limit",
-                data: labels.map(() => m.income),
-                borderColor: "#8fc7a4",
-                borderDash: [5, 5],
-                pointRadius: 0,
-                borderWidth: 1.5
-            }
-          ]
-      },
-      options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          scales: { 
-              y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: {size: 10} } },
-              x: { grid: { display: false } }
-          },
-          plugins: { legend: { display: false } }
-      }
-  });
-}
-
-function showTab(id){
-  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
-  const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
-  if(btn) btn.classList.add("active");
-  else if(event) event.target.classList.add("active");
-
-  document.querySelectorAll('.tab-content').forEach(d => d.classList.add('hidden'));
-  document.getElementById(id).classList.remove("hidden");
-  
-  if(id === 'charts') render();
-}
-
-function exportCSV() {
-    const m = getMonth();
-    let csv = "Date,Name,Amount,Type,Category\n";
-    m.expenses.forEach(e => {
-        csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `budget_${currentMonth}.csv`;
-    a.click();
-}
-
-// Start
-initMonths();
-loadData(); 
-
-</script>
-</body>
-</html>
