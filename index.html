@@ -8,56 +8,64 @@
 <style>
 :root {
   --matcha: #8fc7a4;
+  --matcha-dark: #79b895;
   --strawberry: #f48fb1;
-  --light-pink: #fde4ec;
-  --bg: #fafafa;
+  --strawberry-dark: #ec7aa0;
+  --card-bg: #ffffff;
+  --soft-bg: #f7f7f7;
 }
+
+* { box-sizing: border-box; }
 
 body {
   font-family: system-ui, sans-serif;
-  background: var(--bg);
+  background: #fafafa;
   margin: 0;
-  padding: 24px;
+  padding: 40px 0;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .container {
   display: grid;
   grid-template-columns: 70% 30%;
-  gap: 20px;
+  gap: 24px;
 }
 
 .card {
-  background: white;
+  background: var(--card-bg);
   border-radius: 20px;
   padding: 20px;
 }
 
-h2 {
-  margin-top: 0;
+.soft-card {
+  background: var(--soft-bg);
+  border-radius: 16px;
+  padding: 14px;
 }
 
-input, select, button {
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-}
-
-button {
-  cursor: pointer;
-  background: var(--matcha);
-  color: white;
-  border: none;
+.tabs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
 }
 
 .tabs {
   display: flex;
   gap: 10px;
-  margin-bottom: 16px;
 }
 
 .tabs button {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
   background: #eee;
-  color: #333;
+  cursor: pointer;
 }
 
 .tabs button.active {
@@ -65,18 +73,39 @@ button {
   color: white;
 }
 
+button {
+  background: var(--matcha);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+button:hover {
+  background: var(--matcha-dark);
+}
+
 .hidden { display: none; }
+
+input, select {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
 
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .progress {
-  background: #eee;
+  background: #eaeaea;
+  height: 14px;
   border-radius: 10px;
-  height: 16px;
   overflow: hidden;
 }
 
@@ -99,50 +128,57 @@ td, th {
   font-size: 13px;
 }
 
-.chart-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  gap: 16px;
-  height: 340px;
-}
-
-.chart-box {
-  background: #fff;
-  border-radius: 16px;
-  padding: 10px;
-}
-
 .kpis {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 16px;
 }
 
 .kpi {
-  background: #fff;
+  background: var(--soft-bg);
   border-radius: 14px;
-  padding: 12px;
+  padding: 14px;
   text-align: center;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.chart-box {
+  background: var(--soft-bg);
+  border-radius: 16px;
+  padding: 12px;
+  height: 320px;
+}
+
+canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 </style>
 </head>
 
 <body>
+<div class="app">
 
 <div class="container">
 
 <!-- MAIN -->
 <div class="card">
 
-<div class="tabs">
-  <button class="active" onclick="showTab('track')">Track</button>
-  <button onclick="showTab('expenses')">Expenses</button>
-  <button onclick="showTab('charts')">Charts</button>
-</div>
+<div class="tabs-row">
+  <div class="tabs">
+    <button class="active" onclick="showTab('track')">Track</button>
+    <button onclick="showTab('expenses')">Expenses</button>
+    <button onclick="showTab('charts')">Charts</button>
+  </div>
 
-<!-- MONTH SELECTOR -->
-<select id="monthSelect" onchange="changeMonth()"></select>
+  <select id="monthSelect" onchange="changeMonth()"></select>
+</div>
 
 <!-- TRACK -->
 <div id="track">
@@ -158,20 +194,22 @@ td, th {
   </div>
 
   <h3>Add expense</h3>
-  <input id="name" placeholder="Name" />
-  <input id="amount" type="number" placeholder="Amount" />
-  <select id="type">
-    <option>Fixed</option>
-    <option>Variable</option>
-  </select>
-  <select id="category">
-    <option>Rent</option>
-    <option>Food</option>
-    <option>Fun</option>
-    <option>Travel</option>
-    <option>Saved</option>
-  </select>
-  <button onclick="addExpense()">Add</button>
+  <div class="grid-2">
+    <input id="name" placeholder="Name" />
+    <input id="amount" type="number" placeholder="Amount" />
+    <select id="type">
+      <option>Fixed</option>
+      <option>Variable</option>
+    </select>
+    <select id="category">
+      <option>Rent</option>
+      <option>Food</option>
+      <option>Fun</option>
+      <option>Travel</option>
+      <option>Saved</option>
+    </select>
+  </div>
+  <button style="margin-top:10px" onclick="addExpense()">Add</button>
 </div>
 
 <!-- EXPENSES -->
@@ -197,12 +235,8 @@ td, th {
   </div>
 
   <div class="chart-grid">
-    <div class="chart-box">
-      <canvas id="pieChart"></canvas>
-    </div>
-    <div class="chart-box">
-      <canvas id="lineChart"></canvas>
-    </div>
+    <div class="chart-box"><canvas id="pieChart"></canvas></div>
+    <div class="chart-box"><canvas id="lineChart"></canvas></div>
   </div>
 </div>
 
@@ -211,9 +245,9 @@ td, th {
 <!-- SUMMARY -->
 <div class="card">
 <h2>Monthly summary</h2>
-<div>Income: <span id="sIncome">0</span></div>
-<div>Expenses: <span id="sExpenses">0</span></div>
-<div>Saved: <span id="sSaved">0</span></div>
+<p>Income: <span id="sIncome">0</span></p>
+<p>Expenses: <span id="sExpenses">0</span></p>
+<p>Saved: <span id="sSaved">0</span></p>
 
 <h4>Income usage</h4>
 <div class="progress"><div id="incomeBar" style="background:var(--matcha)"></div></div>
@@ -221,53 +255,49 @@ td, th {
 <h4>Savings goal</h4>
 <div class="progress"><div id="saveBar" style="background:var(--strawberry)"></div></div>
 
-<div style="background:var(--strawberry);color:white;padding:10px;border-radius:12px;margin-top:12px">
+<div style="background:var(--strawberry);color:white;padding:12px;border-radius:14px;margin-top:14px">
 Remaining this month: <strong id="remaining">0</strong>
 </div>
 
-<button style="margin-top:8px;width:100%">Manual sync → CSV</button>
+<button style="margin-top:10px;width:100%">Manual sync → CSV</button>
 </div>
 
+</div>
 </div>
 
 <script>
 let data = JSON.parse(localStorage.getItem("budgetData")) || {};
 let currentMonth = new Date().toISOString().slice(0,7);
 
-function initMonths() {
-  const sel = document.getElementById("monthSelect");
+function initMonths(){
+  const sel = monthSelect;
   sel.innerHTML = "";
-  for (let i=0;i<6;i++) {
-    let d = new Date();
+  for(let i=0;i<6;i++){
+    const d = new Date();
     d.setMonth(d.getMonth()-i);
-    let m = d.toISOString().slice(0,7);
-    sel.innerHTML += `<option value="${m}">${m}</option>`;
+    const m = d.toISOString().slice(0,7);
+    sel.innerHTML += `<option>${m}</option>`;
   }
   sel.value = currentMonth;
 }
 
-function getMonth() {
-  if (!data[currentMonth]) data[currentMonth] = { income:0, goal:0, expenses:[] };
+function getMonth(){
+  if(!data[currentMonth]) data[currentMonth]={income:0,goal:0,expenses:[]};
   return data[currentMonth];
 }
 
-function save() {
-  localStorage.setItem("budgetData", JSON.stringify(data));
-}
+function save(){ localStorage.setItem("budgetData",JSON.stringify(data)); }
 
-function changeMonth() {
-  currentMonth = monthSelect.value;
-  render();
-}
+function changeMonth(){ currentMonth = monthSelect.value; render(); }
 
-function saveMeta() {
+function saveMeta(){
   const m = getMonth();
   m.income = +income.value;
   m.goal = +savingsGoal.value;
   save(); render();
 }
 
-function addExpense() {
+function addExpense(){
   getMonth().expenses.push({
     id: Date.now(),
     name: name.value,
@@ -279,7 +309,9 @@ function addExpense() {
   save(); render();
 }
 
-function render() {
+let pie,line;
+
+function render(){
   const m = getMonth();
   income.value = m.income;
   savingsGoal.value = m.goal;
@@ -301,32 +333,28 @@ function render() {
       <td><input value="${e.name}" onchange="e.name=this.value;save()"></td>
       <td><input type="number" value="${e.amount}" onchange="e.amount=+this.value;save();render()"></td>
       <td><select onchange="e.type=this.value;save()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
-      <td><select onchange="e.category=this.value;save();render()"><option ${e.category=="Rent"?"selected":""}>Rent</option><option ${e.category=="Food"?"selected":""}>Food</option><option ${e.category=="Fun"?"selected":""}>Fun</option><option ${e.category=="Travel"?"selected":""}>Travel</option><option ${e.category=="Saved"?"selected":""}>Saved</option></select></td>
+      <td><select onchange="e.category=this.value;save();render()"><option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option><option>Saved</option></select></td>
       <td><button onclick="m.expenses=m.expenses.filter(x=>x.id!==${e.id});save();render()">✕</button></td>
     </tr>`).join("");
 
   drawCharts(m);
 }
 
-let pie,line;
-function drawCharts(m) {
-  const cats = {};
+function drawCharts(m){
+  const cats={};
   m.expenses.filter(e=>e.category!=="Saved").forEach(e=>cats[e.category]=(cats[e.category]||0)+e.amount);
 
   pie?.destroy();
-  pie = new Chart(pieChart,{type:"pie",data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:["#f48fb1","#8fc7a4","#ffd1dc","#c8e6c9"]}]}});
-
+  pie=new Chart(pieChart,{type:"pie",data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:["#f48fb1","#8fc7a4","#ffd1dc","#c8e6c9"]}]}});
+  
   let cum=0,vals=[];
   m.expenses.forEach(e=>{ if(e.category!=="Saved"){cum+=e.amount;vals.push(cum);} });
 
   line?.destroy();
-  line = new Chart(lineChart,{
-    type:"line",
-    data:{labels:vals.map((_,i)=>i+1),datasets:[
-      {label:"Expenses",data:vals,borderColor:"#f48fb1"},
-      {label:"Budget",data:vals.map(()=>m.income),borderColor:"#8fc7a4",borderDash:[6,6]}
-    ]}
-  });
+  line=new Chart(lineChart,{type:"line",data:{labels:vals.map((_,i)=>i+1),datasets:[
+    {label:"Expenses",data:vals,borderColor:"#f48fb1"},
+    {label:"Budget",data:vals.map(()=>m.income),borderColor:"#8fc7a4",borderDash:[6,6]}
+  ]}});
 }
 
 function showTab(id){
