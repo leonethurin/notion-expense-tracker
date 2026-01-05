@@ -29,12 +29,12 @@ const BudgetTracker = () => {
         const storedBudgets = JSON.parse(result.value);
         const updatedBudgets = storedBudgets.map(budget => ({
           ...budget,
-          spent: calculateSpent(budget.category)
+          spent: expenses.filter(exp => exp.category === budget.category).reduce((sum, exp) => sum + exp.amount, 0)
         }));
         setBudgets(updatedBudgets);
       }
     } catch (error) {
-      console.log('No budgets found or error loading:', error);
+      console.log('No budgets found');
     }
   };
 
@@ -50,10 +50,11 @@ const BudgetTracker = () => {
     try {
       const result = await window.storage.get('expenses');
       if (result?.value) {
-        setExpenses(JSON.parse(result.value));
+        const loadedExpenses = JSON.parse(result.value);
+        setExpenses(loadedExpenses);
       }
     } catch (error) {
-      console.log('No expenses found or error loading:', error);
+      console.log('No expenses found');
     }
   };
 
@@ -65,11 +66,20 @@ const BudgetTracker = () => {
     }
   };
 
-  const calculateSpent = (category) => {
-    return expenses
-      .filter(exp => exp.category === category)
-      .reduce((sum, exp) => sum + exp.amount, 0);
+  const recalculateBudgets = () => {
+    const updatedBudgets = budgets.map(budget => ({
+      ...budget,
+      spent: expenses.filter(exp => exp.category === budget.category).reduce((sum, exp) => sum + exp.amount, 0)
+    }));
+    setBudgets(updatedBudgets);
+    saveBudgets(updatedBudgets);
   };
+
+  useEffect(() => {
+    if (budgets.length > 0 && expenses.length >= 0) {
+      recalculateBudgets();
+    }
+  }, [expenses]);
 
   const addBudget = async () => {
     if (!newBudget.category.trim() || !newBudget.amount) return;
@@ -81,7 +91,7 @@ const BudgetTracker = () => {
       id: Date.now().toString(),
       category: newBudget.category.trim(),
       amount,
-      spent: calculateSpent(newBudget.category.trim())
+      spent: expenses.filter(exp => exp.category === newBudget.category.trim()).reduce((sum, exp) => sum + exp.amount, 0)
     };
 
     const updatedBudgets = [...budgets, budget];
@@ -118,7 +128,6 @@ const BudgetTracker = () => {
     const updatedExpenses = [...expenses, expense];
     setExpenses(updatedExpenses);
     await saveExpenses(updatedExpenses);
-    await loadBudgets();
 
     setNewExpense('');
     setNewAmount('');
@@ -129,11 +138,10 @@ const BudgetTracker = () => {
     const updatedExpenses = expenses.filter(exp => exp.id !== id);
     setExpenses(updatedExpenses);
     await saveExpenses(updatedExpenses);
-    await loadBudgets();
   };
 
-  const updateExpenseAmount = async (id, newAmount) => {
-    const amount = parseFloat(newAmount);
+  const updateExpenseAmount = async (id, newAmountValue) => {
+    const amount = parseFloat(newAmountValue);
     if (isNaN(amount) || amount < 0) return;
 
     const updatedExpenses = expenses.map(exp =>
@@ -142,7 +150,6 @@ const BudgetTracker = () => {
     
     setExpenses(updatedExpenses);
     await saveExpenses(updatedExpenses);
-    await loadBudgets();
   };
 
   const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
