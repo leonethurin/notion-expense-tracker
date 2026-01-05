@@ -147,6 +147,7 @@ body {
 /* DROPDOWNS */
 .header-select {
     width: auto;
+    min-width: 80px; /* Force width so it doesn't disappear */
     border: none;
     background: #f4f4f5;
     padding: 6px 12px;
@@ -319,7 +320,7 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-4 { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; }
 
-/* --- SCREENS (SETUP / LOADING) --- */
+/* --- SCREENS --- */
 .overlay-screen {
     position: absolute; top:0; left:0; width:100%; height:100%;
     background: rgba(255,255,255,0.98);
@@ -335,6 +336,11 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 }
 .setup-input:focus { border-color: var(--strawberry); outline: none; }
 
+.reset-link {
+    margin-top: 15px; font-size: 12px; color: var(--strawberry-dark); 
+    text-decoration: underline; cursor: pointer;
+}
+
 </style>
 </head>
 
@@ -343,21 +349,24 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
   <div id="setupScreen" class="overlay-screen hidden">
       <h2>Welcome to Budget Buddy! 🍓</h2>
-      <p>To start syncing your expenses across devices (and keep them private), you need a free Pantry ID.</p>
+      <p>To keep your data private and sync it, please enter a free Pantry ID.</p>
       
       <div style="background:#f9f9f9; padding:15px; border-radius:8px; margin-bottom:20px; text-align:left; font-size:13px;">
           1. Go to <a href="https://getpantry.cloud/" target="_blank" style="color:var(--strawberry-dark)">getpantry.cloud</a><br>
-          2. Click "Create Pantry" & enter your email.<br>
+          2. Click "Create Pantry" & enter any email.<br>
           3. Copy your <strong>Pantry ID</strong>.<br>
           4. Paste it below.
       </div>
 
-      <input type="text" id="pantryIdInput" class="setup-input" placeholder="Paste ID here (e.g. d345...)" />
+      <input type="text" id="pantryIdInput" class="setup-input" placeholder="Paste ID here..." />
       <button class="btn-primary" style="width:300px" onclick="savePantryId()">Start Tracking</button>
   </div>
 
   <div id="loadingOverlay" class="overlay-screen hidden">
       <h3 style="color:var(--matcha-dark)">Syncing...</h3>
+      <div id="loadingMsg" style="font-size:12px; color:#999; margin-top:5px;">Checking Pantry ID...</div>
+      
+      <a class="reset-link" onclick="forceReset()">Stuck? Click here to enter ID</a>
   </div>
 
   <div class="container">
@@ -371,12 +380,11 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
             </div>
             
             <div class="header-controls">
-                <div id="syncStatus" title="Green = Synced">
+                <div id="syncStatus" title="Status">
                     <div class="status-dot status-yellow" id="statusDot"></div>
-                    <span id="statusText">...</span>
                 </div>
                 
-                <button class="settings-btn" onclick="openSetup()" title="Change Cloud ID">⚙️</button>
+                <button class="settings-btn" onclick="openSetup()" title="Settings">⚙️</button>
 
                 <select id="currencySelect" class="header-select" onchange="changeCurrency()">
                     <option value="kr">SEK (kr)</option>
@@ -537,28 +545,35 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
 <script>
 // ==========================================
-// CONFIG: DYNAMIC PANTRY ID
+// CONFIG
 // ==========================================
-const BASKET_NAME = "expenseTracker"; // We use one generic basket name, but separate IDs
-let userPantryId = localStorage.getItem("userPantryId"); // Load saved ID
+const BASKET_NAME = "expenseTracker"; 
+let userPantryId = localStorage.getItem("userPantryId"); 
 
 let fullData = {}; 
 let settings = { currency: "kr" };
 let currentMonth = new Date().toISOString().slice(0,7);
 let saveTimeout;
 
-// -- SETUP LOGIC --
+// -- INIT --
+// Force run this immediately to ensure UI is visible
+initMonths();
+initApp();
 
 function initApp() {
-    initMonths();
-    
-    if(!userPantryId) {
-        // No ID found? Show Setup Screen
+    if(!userPantryId || userPantryId === "null" || userPantryId === "undefined") {
         document.getElementById('setupScreen').classList.remove('hidden');
+        document.getElementById('loadingOverlay').classList.add('hidden');
     } else {
-        // ID found? Start loading
         loadData();
     }
+}
+
+function forceReset() {
+    localStorage.removeItem("userPantryId");
+    userPantryId = null;
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('setupScreen').classList.remove('hidden');
 }
 
 function savePantryId() {
@@ -574,29 +589,364 @@ function savePantryId() {
 }
 
 function openSetup() {
-    if(confirm("Do you want to change your Cloud ID? This will switch to a different budget.")) {
+    if(confirm("Change ID? (This switches databases)")) {
         document.getElementById('pantryIdInput').value = userPantryId || "";
         document.getElementById('setupScreen').classList.remove('hidden');
     }
 }
 
-// -- SYNC LOGIC --
-
-function setStatus(state, msg) {
+function setStatus(state) {
     const dot = document.getElementById('statusDot');
-    const txt = document.getElementById('statusText');
-    if(state === 'loading') {
-        dot.className = "status-dot status-yellow";
-        txt.textContent = "Syncing";
-    } else if (state === 'saved') {
-        dot.className = "status-dot status-green";
-        txt.textContent = "Synced";
-    } else if (state === 'error') {
-        dot.className = "status-dot status-red";
-        txt.textContent = msg || "Error";
-    }
+    if(state === 'loading') dot.className = "status-dot status-yellow";
+    else if (state === 'saved') dot.className = "status-dot status-green";
+    else dot.className = "status-dot status-red";
 }
 
 async function loadData() {
     document.getElementById('loadingOverlay').classList.remove('hidden');
     setStatus('loading');
+    
+    try {
+        const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
+        const res = await fetch(url);
+        
+        if(!res.ok) {
+            // New user or bad ID
+            console.log("Basket not found, creating...");
+            const initSuccess = await createInitialBasket();
+            if(initSuccess) {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                setStatus('saved');
+                render();
+                return;
+            } else {
+                throw new Error("Init Failed");
+            }
+        }
+
+        const json = await res.json();
+        fullData = json.data || {};
+        settings = json.settings || { currency: "kr" };
+        
+        document.getElementById('currencySelect').value = settings.currency;
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        setStatus('saved');
+        render();
+
+    } catch(e) {
+        console.error(e);
+        // If failed, show alert in loading screen
+        document.getElementById('loadingMsg').innerText = "Connection failed. Check ID.";
+        setStatus('error');
+    }
+}
+
+async function createInitialBasket() {
+    try {
+        const payload = { data: {}, settings: { currency: "kr" } };
+        const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if(res.ok) {
+            fullData = {};
+            settings = { currency: "kr" };
+            return true;
+        }
+        return false;
+    } catch(e) { return false; }
+}
+
+async function saveData() {
+    if(!userPantryId) return;
+    setStatus('loading');
+    try {
+        const payload = { data: fullData, settings: settings };
+        const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        if(!res.ok) throw new Error("Save Error");
+        setStatus('saved');
+    } catch(e) {
+        setStatus('error');
+    }
+}
+
+function debouncedSave() {
+    saveMetaLocally(); 
+    clearTimeout(saveTimeout);
+    setStatus('loading');
+    saveTimeout = setTimeout(saveData, 1500);
+}
+
+// -- APP LOGIC --
+function formatMoney(num) {
+    if(!num && num !== 0) return "0 " + settings.currency;
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + settings.currency;
+}
+
+function initMonths(){
+  const sel = document.getElementById('monthSelect');
+  if(!sel) return; // Safety check
+  sel.innerHTML = "";
+  for(let i=0; i<6; i++){
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const m = d.toISOString().slice(0,7);
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.innerText = m;
+    sel.appendChild(opt);
+  }
+  sel.value = currentMonth;
+}
+
+function getMonth(){
+  if(!fullData[currentMonth]) fullData[currentMonth] = { income: 0, goal: 0, expenses: [] };
+  return fullData[currentMonth];
+}
+
+function changeMonth(){ 
+    currentMonth = document.getElementById('monthSelect').value; 
+    render(); 
+}
+
+function changeCurrency() {
+    settings.currency = document.getElementById('currencySelect').value;
+    saveData();
+    render();
+}
+
+function saveMetaLocally(){
+  const m = getMonth();
+  m.income = +document.getElementById('income').value;
+  m.goal = +document.getElementById('savingsGoal').value;
+  render(); 
+}
+
+function addExpense(){
+  const nameVal = document.getElementById('inputName').value;
+  const amountVal = document.getElementById('inputAmount').value;
+  const typeVal = document.getElementById('inputType').value;
+  const catVal = document.getElementById('inputCategory').value;
+
+  if(!nameVal || !amountVal) {
+      alert("Please enter name and amount");
+      return;
+  }
+
+  getMonth().expenses.push({
+    id: Date.now(),
+    name: nameVal,
+    amount: +amountVal,
+    type: typeVal,
+    category: catVal,
+    date: new Date().toISOString().slice(0,10)
+  });
+
+  document.getElementById('inputName').value = "";
+  document.getElementById('inputAmount').value = "";
+  
+  saveData(); 
+  render();
+}
+
+window.updateExpense = function(index, field, element) {
+    const m = getMonth();
+    let val = element.value;
+    if(field === 'amount') val = Number(val);
+    m.expenses[index][field] = val;
+    render(); 
+    clearTimeout(saveTimeout);
+    setStatus('loading');
+    saveTimeout = setTimeout(saveData, 2000); 
+}
+
+function deleteExpense(i){
+  if(confirm("Delete this expense?")){
+      getMonth().expenses.splice(i,1);
+      saveData();
+      render();
+  }
+}
+
+let pieChartInstance, lineChartInstance;
+
+function render(){
+  const m = getMonth();
+  
+  if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
+  if(document.activeElement.id !== 'savingsGoal') document.getElementById('savingsGoal').value = m.goal || "";
+
+  let totalExp = m.expenses.filter(e => e.category !== "Saved").reduce((a,b) => a + b.amount, 0);
+  let totalSaved = m.expenses.filter(e => e.category === "Saved").reduce((a,b) => a + b.amount, 0);
+  let remainingVal = m.income - totalExp - totalSaved;
+
+  document.getElementById('kIncome').textContent = formatMoney(m.income);
+  document.getElementById('sIncome').textContent = formatMoney(m.income);
+  
+  document.getElementById('kExpenses').textContent = formatMoney(totalExp);
+  document.getElementById('sExpenses').textContent = formatMoney(totalExp);
+
+  document.getElementById('kSaved').textContent = formatMoney(totalSaved);
+  document.getElementById('sSaved').textContent = formatMoney(totalSaved);
+
+  document.getElementById('remaining').textContent = formatMoney(remainingVal.toFixed(2));
+
+  const incomePct = m.income ? Math.min((totalExp / m.income) * 100, 100) : 0;
+  document.getElementById('incomeBar').style.width = incomePct + "%";
+  document.getElementById('incomeUsageText').textContent = incomePct.toFixed(0) + "% used";
+
+  const goalPct = m.goal ? Math.min((totalSaved / m.goal) * 100, 100) : 0;
+  document.getElementById('saveBar').style.width = goalPct + "%";
+  document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
+
+  const tbody = document.getElementById('expenseTable');
+  tbody.innerHTML = m.expenses.map((e, i) => `
+    <tr>
+      <td><input type="date" value="${e.date}" onchange="updateExpense(${i}, 'date', this)"></td>
+      <td><input type="text" value="${e.name}" onchange="updateExpense(${i}, 'name', this)"></td>
+      <td><input type="number" value="${e.amount}" onchange="updateExpense(${i}, 'amount', this)"></td>
+      <td>
+        <select onchange="updateExpense(${i}, 'type', this)">
+            <option ${e.type=="Fixed"?"selected":""}>Fixed</option>
+            <option ${e.type=="Variable"?"selected":""}>Variable</option>
+        </select>
+      </td>
+      <td>
+        <select onchange="updateExpense(${i}, 'category', this)">
+            <option ${e.category=="Rent"?"selected":""}>Rent</option>
+            <option ${e.category=="Food"?"selected":""}>Food</option>
+            <option ${e.category=="Fun"?"selected":""}>Fun</option>
+            <option ${e.category=="Travel"?"selected":""}>Travel</option>
+            <option ${e.category=="Subscriptions"?"selected":""}>Subscriptions</option>
+            <option ${e.category=="Bills"?"selected":""}>Bills</option>
+            <option ${e.category=="Saved"?"selected":""}>Saved</option>
+            <option ${e.category=="Other"?"selected":""}>Other</option>
+        </select>
+      </td>
+      <td><button class="btn-delete" onclick="deleteExpense(${i})">✕</button></td>
+    </tr>
+  `).join("");
+
+  drawCharts(m);
+}
+
+function drawCharts(m){
+  const cats = {};
+  m.expenses.filter(e => e.category !== "Saved").forEach(e => {
+      cats[e.category] = (cats[e.category] || 0) + e.amount;
+  });
+
+  const pieCtx = document.getElementById('pieChart').getContext('2d');
+  if(pieChartInstance) pieChartInstance.destroy();
+  
+  const colors = ["#f48fb1", "#8fc7a4", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0", "#ffecb3", "#b39ddb"];
+
+  pieChartInstance = new Chart(pieCtx, {
+      type: "doughnut",
+      data: {
+          labels: Object.keys(cats),
+          datasets: [{
+              data: Object.values(cats),
+              backgroundColor: colors,
+              borderWidth: 0,
+              hoverOffset: 4
+          }]
+      },
+      options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } } 
+      }
+  });
+
+  let cum = 0;
+  let vals = [];
+  const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
+  
+  sortedExp.forEach(e => {
+      if(e.category !== "Saved"){
+          cum += e.amount;
+          vals.push({x: e.date, y: cum});
+      }
+  });
+
+  const lineCtx = document.getElementById('lineChart').getContext('2d');
+  if(lineChartInstance) lineChartInstance.destroy();
+  
+  const labels = vals.map((_, i) => i + 1); 
+  const dataPoints = vals.map(v => v.y);
+
+  lineChartInstance = new Chart(lineCtx, {
+      type: "line",
+      data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Spending",
+              data: dataPoints,
+              borderColor: "#f48fb1", 
+              borderWidth: 2,
+              tension: 0.4,
+              fill: true,
+              backgroundColor: "rgba(244, 143, 177, 0.15)", 
+              pointBackgroundColor: "#f48fb1",
+              pointRadius: 3
+            },
+            {
+                label: "Limit",
+                data: labels.map(() => m.income),
+                borderColor: "#8fc7a4",
+                borderDash: [5, 5],
+                pointRadius: 0,
+                borderWidth: 1.5
+            }
+          ]
+      },
+      options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          scales: { 
+              y: { beginAtZero: true, grid: { color: '#eee' }, ticks: { font: {size: 10} } },
+              x: { grid: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+      }
+  });
+}
+
+function showTab(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
+  if(btn) btn.classList.add("active");
+  else if(event) event.target.classList.add("active");
+
+  document.querySelectorAll('.tab-content').forEach(d => d.classList.add('hidden'));
+  document.getElementById(id).classList.remove("hidden");
+  
+  if(id === 'charts') render();
+}
+
+function exportCSV() {
+    const m = getMonth();
+    let csv = "Date,Name,Amount,Type,Category\n";
+    m.expenses.forEach(e => {
+        csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `budget_${currentMonth}.csv`;
+    a.click();
+}
+
+</script>
+</body>
+</html>
