@@ -177,7 +177,7 @@ td, th {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 16px;
-  align-items: start;
+  align-items: center;
 }
 
 .chart-box {
@@ -187,13 +187,13 @@ td, th {
 }
 
 .chart-box:nth-child(1) {
-  width: 300px;
-  height: 300px;
+  width: 220px;
+  height: 220px;
 }
 
 .chart-box:nth-child(2) {
-  height: 400px;
-  min-width: 400px;
+  height: 300px;
+  min-width: 450px;
 }
 
 canvas {
@@ -360,10 +360,17 @@ function addExpense(){
     category: category.value,
     date: new Date().toISOString().slice(0,10)
   });
+  name.value = "";
+  amount.value = "";
   save(); render();
 }
 
 let pie,line;
+
+function deleteExpense(i){
+  getMonth().expenses.splice(i,1);
+  save(); render();
+}
 
 function render(){
   const m = getMonth();
@@ -381,14 +388,14 @@ function render(){
   incomeBar.style.width = m.income? (exp/m.income*100)+"%":"0%";
   saveBar.style.width = m.goal? (saved/m.goal*100)+"%":"0%";
 
-  expenseTable.innerHTML = m.expenses.map(e=>`
+  expenseTable.innerHTML = m.expenses.map((e,i)=>`
     <tr>
-      <td><input type="date" value="${e.date}" onchange="e.date=this.value;save();render()"></td>
-      <td><input value="${e.name}" onchange="e.name=this.value;save();render()"></td>
-      <td><input type="number" value="${e.amount}" onchange="e.amount=+this.value;save();render()"></td>
-      <td><select onchange="e.type=this.value;save();render()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
-      <td><select onchange="e.category=this.value;save();render()"><option ${e.category=="Rent"?"selected":""}>Rent</option><option ${e.category=="Food"?"selected":""}>Food</option><option ${e.category=="Fun"?"selected":""}>Fun</option><option ${e.category=="Travel"?"selected":""}>Travel</option><option ${e.category=="Saved"?"selected":""}>Saved</option></select></td>
-      <td><button onclick="m.expenses.splice(m.expenses.findIndex(x=>x.id===${e.id}),1);save();render()">✕</button></td>
+      <td><input type="date" value="${e.date}" onchange="m.expenses[${i}].date=this.value;save();render()"></td>
+      <td><input value="${e.name}" onchange="m.expenses[${i}].name=this.value;save();render()"></td>
+      <td><input type="number" value="${e.amount}" onchange="m.expenses[${i}].amount=+this.value;save();render()"></td>
+      <td><select onchange="m.expenses[${i}].type=this.value;save();render()"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
+      <td><select onchange="m.expenses[${i}].category=this.value;save();render()"><option ${e.category=="Rent"?"selected":""}>Rent</option><option ${e.category=="Food"?"selected":""}>Food</option><option ${e.category=="Fun"?"selected":""}>Fun</option><option ${e.category=="Travel"?"selected":""}>Travel</option><option ${e.category=="Saved"?"selected":""}>Saved</option></select></td>
+      <td><button onclick="deleteExpense(${i})">✕</button></td>
     </tr>`).join("");
 
   drawCharts(m);
@@ -406,9 +413,9 @@ function drawCharts(m){
 
   line?.destroy();
   line=new Chart(lineChart,{type:"line",data:{labels:vals.map((_,i)=>i+1),datasets:[
-    {label:"Expenses",data:vals,borderColor:"#f48fb1"},
-    {label:"Budget",data:vals.map(()=>m.income),borderColor:"#8fc7a4",borderDash:[6,6]}
-  ]}});
+    {label:"Expenses",data:vals,borderColor:"#f48fb1",tension:0.3},
+    {label:"Budget",data:vals.map(()=>m.income),borderColor:"#8fc7a4",borderDash:[6,6],tension:0.3}
+  ]},options:{maintainAspectRatio:true,responsive:true}});
 }
 
 function showTab(id){
