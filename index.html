@@ -22,7 +22,8 @@ button.small{font-size:12px;padding:4px 8px}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tab{padding:6px 12px;border-radius:999px;background:#eee;font-size:13px;cursor:pointer}
 .tab.active{background:var(--matcha);color:white}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .progress{background:#eee;border-radius:999px;overflow:hidden;height:14px;margin:6px 0}
 .progress-bar{height:100%;width:0%;transition:.3s}
 .safe{background:linear-gradient(90deg,var(--matcha),var(--strawberry))}
@@ -31,8 +32,9 @@ button.small{font-size:12px;padding:4px 8px}
 .remaining{background:var(--strawberry);color:white;padding:10px;border-radius:14px;font-weight:700;text-align:center;margin-top:10px}
 .summary-row{display:flex;justify-content:space-between;font-size:14px;margin:6px 0}
 table{width:100%;font-size:13px;border-collapse:collapse;margin-top:10px}
-th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
+th,td{border-bottom:1px solid #eee;padding:6px;text-align:left}
 .hidden{display:none}
+.kpi{font-size:22px;font-weight:700;margin-top:6px}
 </style>
 </head>
 <body>
@@ -45,14 +47,17 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 
 <div class="layout">
 
-  <!-- MAIN BOX (70%) -->
+  <!-- MAIN BOX -->
   <div class="card">
 
     <!-- TRACK -->
     <div id="trackView">
-      <div class="grid-2"><div><label>Monthly income</label><input id="income" type="number" /></div><div><label>Savings goal</label><input id="savingsGoal" type="number" /></div></div>
+      <div class="grid-2">
+        <div><label>Monthly income</label><input id="income" type="number" /></div>
+        <div><label>Savings goal</label><input id="savingsGoal" type="number" /></div>
+      </div>
 
-      <label>Expense</label>
+      <label>Add expense</label>
       <div class="grid-2">
         <input id="expenseName" placeholder="Name" />
         <input id="expenseAmount" type="number" placeholder="Amount" />
@@ -61,16 +66,11 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
       <div class="grid-2">
         <div>
           <label>Type</label>
-          <select id="expenseType">
-            <option value="fixed">Fixed</option>
-            <option value="variable">Variable</option>
-          </select>
+          <select id="expenseType"><option value="fixed">Fixed</option><option value="variable">Variable</option></select>
         </div>
         <div>
           <label>Category</label>
-          <select id="expenseCategory">
-            <option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option><option>Bills</option><option>Saved</option>
-          </select>
+          <select id="expenseCategory"><option>Rent</option><option>Food</option><option>Fun</option><option>Travel</option><option>Bills</option><option>Saved</option></select>
         </div>
       </div>
 
@@ -87,18 +87,20 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 
     <!-- CHARTS -->
     <div id="chartsView" class="hidden">
-  <div class="grid-2">
-    <div class="card"><strong>Income</strong><div id="kpiIncome">0</div></div>
-    <div class="card"><strong>Expenses</strong><div id="kpiExpenses">0</div></div>
-    <div class="card"><strong>Saved</strong><div id="kpiSaved">0</div></div>
-  </div>
-  <canvas id="pie" height="200" style="margin-top:20px"></canvas>
-  <canvas id="trend" height="220" style="margin-top:20px"></canvas>
-</div>
+      <div class="grid-3">
+        <div class="card"><div>Income</div><div id="kpiIncome" class="kpi">0</div></div>
+        <div class="card"><div>Expenses</div><div id="kpiExpenses" class="kpi">0</div></div>
+        <div class="card"><div>Saved</div><div id="kpiSaved" class="kpi">0</div></div>
+      </div>
+      <div class="grid-2" style="margin-top:16px">
+        <canvas id="pie"></canvas>
+        <canvas id="trend"></canvas>
+      </div>
+    </div>
 
   </div>
 
-  <!-- SUMMARY BOX (30%) -->
+  <!-- SUMMARY -->
   <div class="card">
     <h3>Monthly summary</h3>
     <div class="summary-row"><span>Income</span><span id="sumIncome">0</span></div>
@@ -108,7 +110,7 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
     <small>Income usage</small>
     <div class="progress"><div id="incomeBar" class="progress-bar safe"></div></div>
 
-    <small>Savings goal</small>
+    <small>Savings goal progress</small>
     <div class="progress"><div id="savingsBar" class="progress-bar safe"></div></div>
 
     <div class="remaining">Remaining this month: <span id="remaining">0</span></div>
@@ -119,31 +121,34 @@ th,td{border-bottom:1px solid #eee;padding:8px;text-align:left}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const store = JSON.parse(localStorage.getItem('tracker')) || { savingsGoal: 0, months: {} };
+const store = JSON.parse(localStorage.getItem('tracker')) || { savingsGoal:0, months:{} };
 let month = new Date().toISOString().slice(0,7);
+let pieChart, trendChart;
 
 function data(){ if(!store.months[month]) store.months[month]={income:0,expenses:[]}; return store.months[month]; }
 function save(){ localStorage.setItem('tracker', JSON.stringify(store)); }
 
-function switchView(v){ ['track','edit','charts'].forEach(x=>{
-  document.getElementById(x+'View').classList.toggle('hidden',x!==v);
-}); document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',[ 'track','edit','charts'][i]===v)); render(); }
-
-function addExpense(){
-  if(!expenseName.value||!expenseAmount.value) return;
-  data().expenses.push({name:expenseName.value,amount:+expenseAmount.value,type:expenseType.value,category:expenseCategory.value});
-  expenseName.value=''; expenseAmount.value=''; save(); render();
-}
+function switchView(v){ ['track','edit','charts'].forEach(x=>document.getElementById(x+'View').classList.toggle('hidden',x!==v)); document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',[ 'track','edit','charts'][i]===v)); render(); }
 
 income.oninput=()=>{ data().income=+income.value; save(); render(); }
+savingsGoal.oninput=()=>{ store.savingsGoal=+savingsGoal.value; save(); render(); }
+
+function addExpense(){ if(!expenseName.value||!expenseAmount.value) return; data().expenses.push({name:expenseName.value,amount:+expenseAmount.value,type:expenseType.value,category:expenseCategory.value}); expenseName.value=''; expenseAmount.value=''; save(); render(); }
+function del(i){ data().expenses.splice(i,1); save(); render(); }
+function edit(i,k,v){ data().expenses[i][k]=k==='amount'?+v:v; save(); render(); }
 
 function render(){
-  const d=data(); income.value=d.income||'';
+  const d=data(); income.value=d.income||''; savingsGoal.value=store.savingsGoal||'';
   let spent=0,saved=0; expenseTable.innerHTML='';
-
   d.expenses.forEach((e,i)=>{
     if(e.category==='Saved') saved+=e.amount; else spent+=e.amount;
-    expenseTable.innerHTML+=`<tr><td>${e.name}</td><td>${e.type}</td><td>${e.category}</td><td>${e.amount}</td><td><button class='small' onclick='del(${i})'>✕</button></td></tr>`;
+    expenseTable.innerHTML+=`<tr>
+      <td><input value="${e.name}" onchange="edit(${i},'name',this.value)"></td>
+      <td><select onchange="edit(${i},'type',this.value)"><option ${e.type==='fixed'?'selected':''}>fixed</option><option ${e.type==='variable'?'selected':''}>variable</option></select></td>
+      <td><select onchange="edit(${i},'category',this.value)">${['Rent','Food','Fun','Travel','Bills','Saved'].map(c=>`<option ${e.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td><input type="number" value="${e.amount}" onchange="edit(${i},'amount',this.value)"></td>
+      <td><button class="small" onclick="del(${i})">✕</button></td>
+    </tr>`;
   });
 
   sumIncome.textContent=d.income.toFixed(2);
@@ -151,25 +156,26 @@ function render(){
   sumSaved.textContent=saved.toFixed(2);
   remaining.textContent=(d.income-spent).toFixed(2);
 
-  incomeBar.style.width=Math.min(100,(spent/d.income)*100||0)+'%';
+  kpiIncome.textContent=d.income.toFixed(2);
+  kpiExpenses.textContent=spent.toFixed(2);
+  kpiSaved.textContent=saved.toFixed(2);
+
+  incomeBar.style.width=Math.min(100,(spent/d.income||0)*100)+'%';
   savingsBar.style.width=Math.min(100,(saved/(store.savingsGoal||1))*100)+'%';
 
-  drawCharts(d);
+  drawCharts(d, spent);
 }
 
-function del(i){ data().expenses.splice(i,1); save(); render(); }
-
-function drawCharts(d){
+function drawCharts(d, spent){
   const cats={}; d.expenses.forEach(e=>{ if(e.category!=='Saved') cats[e.category]=(cats[e.category]||0)+e.amount; });
-  if(window.pieChart) pieChart.destroy();
+  if(pieChart) pieChart.destroy();
   pieChart=new Chart(pie,{type:'pie',data:{labels:Object.keys(cats),datasets:[{data:Object.values(cats),backgroundColor:['#f28cab','#7fbf9b','#ffd6e0','#b7e4c7','#ffb703']}]}});
+
+  if(trendChart) trendChart.destroy();
+  trendChart=new Chart(trend,{type:'line',data:{labels:['Start','Now'],datasets:[{label:'Expenses',data:[0,spent],borderColor:'#f28cab',fill:false},{label:'Budget',data:[d.income,d.income],borderColor:'#7fbf9b',borderDash:[5,5],fill:false} ]}});
 }
 
-function manualSync(){
-  let csv='Month,Income,Name,Type,Category,Amount\n';
-  data().expenses.forEach(e=>csv+=`${month},${data().income},${e.name},${e.type},${e.category},${e.amount}\n`);
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`${month}.csv`; a.click();
-}
+function manualSync(){ let csv='Month,Income,Name,Type,Category,Amount\n'; data().expenses.forEach(e=>csv+=`${month},${data().income},${e.name},${e.type},${e.category},${e.amount}\n`); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`${month}.csv`; a.click(); }
 
 render();
 </script>
