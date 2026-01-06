@@ -368,11 +368,23 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px;
 }
-/* Health score specific to make it blend in */
+
+/* === MODIFIERAD HEALTH-STYLE === */
+/* Den matchar nu Expenses-raden i färg (ljusrosa) */
 .summary-item.health-item {
-    background: transparent; 
-    border: 1px solid transparent; /* Match layout */
+    background: var(--strawberry-light);
+    color: var(--strawberry-dark);
     margin-top: 8px;
+}
+
+/* "Health" (vänster sida) -> Fetstil */
+.summary-item.health-item span:first-child {
+    font-weight: 700;
+}
+
+/* "On Track" (höger sida) -> Normal stil (inte fet) */
+.summary-item.health-item span:last-child {
+    font-weight: 500;
 }
 
 .sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
