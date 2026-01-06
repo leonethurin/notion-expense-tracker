@@ -155,11 +155,14 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
 .sidebar-section { margin-bottom: 24px; }
 .summary-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+.sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
+.sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
+
+/* HEALTH ITEM STYLE */
 .summary-item.health-item { background: var(--strawberry); color: white; margin-top: 12px; box-shadow: 0 4px 12px rgba(244, 143, 177, 0.3); }
 .summary-item.health-item span:first-child { font-weight: 700; font-size: 14px; }
 .summary-item.health-item span:last-child { font-weight: 500; font-size: 13px; opacity: 0.95; }
-.sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
-.sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
+
 .summary-item span:first-child { font-weight: 500; }
 .summary-item span:last-child { font-weight: 700; font-size: 14px; }
 
@@ -437,7 +440,6 @@ function initApp() {
     }
 
     if(!userPantryId) {
-        // No user -> Show Setup
         document.getElementById('setupScreen').classList.remove('hidden');
     } else {
         // User exists -> Load LOCAL data first (Instant)
@@ -448,7 +450,7 @@ function initApp() {
                 fullData = parsed.data || {};
                 settings = parsed.settings || { currency: "kr" };
                 console.log("Loaded from cache");
-                render(); // Show UI immediately
+                render(); 
             } catch(e) { console.error("Cache corrupt"); }
         }
         
@@ -491,7 +493,7 @@ function setStatus(state, msg) {
     }
     else { 
         dot.className = "status-dot status-red"; 
-        txt.textContent = "Offline (Saved locally)";
+        txt.textContent = "Offline";
     }
 }
 
@@ -508,7 +510,7 @@ function showToast(message, type = "success") {
     }, 3000);
 }
 
-// === CORE SYNC LOGIC ===
+// === CORE SYNC LOGIC (PANTRY) ===
 async function attemptSync() {
     if(!userPantryId) return;
     setStatus('loading');
@@ -516,16 +518,16 @@ async function attemptSync() {
     try {
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
         
-        // 5 second timeout for sync - don't hang forever
+        // Short timeout for sync check
         const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 5000); 
+        const id = setTimeout(() => controller.abort(), 6000); 
         
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(id);
         
         if(!res.ok) {
             if(res.status === 404) {
-                 await createInitialBasket(); // If missing, create
+                 await createInitialBasket(); 
                  return;
             }
             throw new Error("Server error");
@@ -533,7 +535,7 @@ async function attemptSync() {
 
         const json = await res.json();
         
-        // MERGE LOGIC: Just take cloud data as truth for now to ensure sync across users
+        // Merge Cloud Data if valid
         if(json.data) {
             fullData = json.data;
             settings = json.settings || { currency: "kr" };
@@ -548,7 +550,7 @@ async function attemptSync() {
 
     } catch(e) {
         console.warn("Sync failed, running offline", e);
-        setStatus('error'); // Show red dot, but app works
+        setStatus('error'); 
     }
 }
 
@@ -575,11 +577,19 @@ async function saveData() {
     try {
         const payload = { data: fullData, settings: settings };
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
+        
+        // Don't wait forever on save either
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 8000);
+
         const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: controller.signal
         });
+        clearTimeout(id);
+        
         if(res.ok) setStatus('saved');
         else throw new Error("Cloud save failed");
     } catch(e) {
@@ -590,7 +600,7 @@ async function saveData() {
 function debouncedSave() {
     saveMetaLocally(); 
     clearTimeout(saveTimeout);
-    setStatus('loading'); // Show activity
+    setStatus('loading'); 
     saveTimeout = setTimeout(saveData, 1500);
 }
 
