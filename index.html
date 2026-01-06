@@ -370,23 +370,26 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
     margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px;
 }
 
-/* === MODIFIERAD HEALTH-STYLE (MATCHING EXPENSES) === */
+/* === STIL-JUSTERING FÖR UNIFORM VIKT === */
+/* Nu är alla rader exakt likadana i vikt */
+.summary-item span:first-child { 
+    font-weight: 500; /* Medium vikt på etiketten (Income, Health etc) */
+}
+.summary-item span:last-child { 
+    font-weight: 700; /* Fet vikt på värdet (0 kr, On Track etc) */
+    font-size: 14px; 
+}
+
+/* Färg-klasser */
+.sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
+.sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
+
+/* Health matchar nu "Expenses" (sum-pink) i färg, men följer standardvikt ovan */
 .summary-item.health-item {
     background: var(--strawberry-light);
     color: var(--strawberry-dark);
     margin-top: 8px;
 }
-.summary-item.health-item span:first-child {
-    font-weight: 700;
-}
-.summary-item.health-item span:last-child {
-    font-weight: 500;
-}
-
-.sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
-.sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
-.summary-item span:first-child { font-weight: 500; }
-.summary-item span:last-child { font-weight: 700; font-size: 14px; }
 
 .progress-group { margin-bottom: 16px; }
 .progress-header {
