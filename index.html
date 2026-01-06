@@ -319,7 +319,7 @@ th {
   background: #fff; text-align: left; padding: 12px; font-size: 11px;
   color: var(--text-light); font-weight: 600; position: sticky; top: 0;
   border-bottom: 1px solid var(--border-color); z-index: 10;
-  cursor: pointer; /* Clickable headers */
+  cursor: pointer;
   user-select: none;
 }
 th:hover { background: #f9f9f9; color: var(--strawberry-dark); }
@@ -368,6 +368,13 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px;
 }
+/* Health score specific to make it blend in */
+.summary-item.health-item {
+    background: transparent; 
+    border: 1px solid transparent; /* Match layout */
+    margin-top: 8px;
+}
+
 .sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
 .sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
 .summary-item span:first-child { font-weight: 500; }
@@ -664,9 +671,9 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
                 <span>Saved</span>
                 <span id="sSaved">0</span>
             </div>
-            <div class="summary-item" style="background: #fdfdfd; border:1px solid #eee; margin-top:12px;">
-                <span>Financial Health</span>
-                <span id="healthScore">Calculating...</span>
+            <div class="summary-item health-item">
+                <span>Health</span>
+                <span id="healthScore">...</span>
             </div>
         </div>
 
@@ -790,7 +797,7 @@ function setStatus(state) {
     else dot.className = "status-dot status-red";
 }
 
-// === TOAST NOTIFICATION SYSTEM ===
+// === TOAST NOTIFICATIONS SYSTEM ===
 function showToast(message, type = "success") {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
@@ -798,10 +805,7 @@ function showToast(message, type = "success") {
     toast.innerHTML = type === 'error' ? `⚠️ ${message}` : `✅ ${message}`;
     container.appendChild(toast);
 
-    // Trigger animation
     setTimeout(() => toast.classList.add('show'), 10);
-    
-    // Remove after 3s
     setTimeout(() => {
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
@@ -1006,46 +1010,17 @@ function importRecurring() {
 
 window.updateExpense = function(index, field, element) {
     const m = getMonth();
-    
-    // We need to find the actual expense in the array based on filtered view or raw index
-    // Note: The simple implementation assumes index maps directly, 
-    // but with search/sort we must be careful.
-    // For safety in this version, render passes the ARRAY index, 
-    // but filtering/sorting modifies displayed order.
-    // *FIX*: filterExpenses() creates a temporary view, we need to map back to original ID.
-    // However, to keep it simple, we will disable inline editing while searching
-    // OR we just re-render on search clear.
-    
-    // Actually, sorting modifies the VIEW, not the Data.
-    // So we need to handle updates carefully.
-    // SIMPLE FIX: If searching/sorting is active, we find the item by ID.
-    
-    // We will use the 'data-id' attribute approach in a robust app, 
-    // but here we stick to simple index unless sorted.
-    // Let's assume standard order unless sorted.
-    
-    // To make this robust: We will refresh the whole render on change.
-    
-    // For now, simple direct update:
-    // If sorted, this might update wrong item. 
-    // To fix properly:
-    // We will use the ID stored in the row button.
-    
-    // But since `element` is the input, we can't easily pass ID without changing HTML gen significantly.
-    // Let's rely on standard order for now (Search disables sort/edit visually or we reset).
-    
     let val = element.value;
     if(field === 'amount') val = Number(val);
     
-    // If we are sorted or searched, 'index' passed here is actually the index in 'filteredExpenses'.
-    // We need to find the real index in m.expenses.
-    
+    // Find real item based on what's displayed (handles sort/filter)
     const displayedItem = currentDisplayedExpenses[index];
+    if(!displayedItem) return;
+    
     const realIndex = m.expenses.findIndex(e => e.id === displayedItem.id);
     
     if(realIndex !== -1) {
         m.expenses[realIndex][field] = val;
-        // Don't full render, just save
         clearTimeout(saveTimeout);
         setStatus('loading');
         saveTimeout = setTimeout(saveData, 2000); 
@@ -1053,14 +1028,12 @@ window.updateExpense = function(index, field, element) {
 }
 
 function deleteExpense(id){
-    // Using ID instead of Index to be safe with sorting/searching
     const m = getMonth();
     const realIndex = m.expenses.findIndex(e => e.id === id);
-    
     if(realIndex !== -1 && confirm("Delete this expense?")){
         m.expenses.splice(realIndex, 1);
         saveData();
-        render(); // Re-render to update list
+        render(); 
         showToast("Expense Deleted");
     }
 }
@@ -1085,7 +1058,6 @@ let pieChartInstance, lineChartInstance;
 function render(){
   const m = getMonth();
   
-  // Fill inputs
   if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
   if(document.activeElement.id !== 'monthlyBudget') document.getElementById('monthlyBudget').value = m.monthlyBudget || "";
   if(document.activeElement.id !== 'monthlySavingsGoal') document.getElementById('monthlySavingsGoal').value = m.monthlySavingsGoal || "";
@@ -1106,13 +1078,14 @@ function render(){
 
   document.getElementById('remaining').textContent = formatMoney(remainingVal.toFixed(2));
 
-  // Health Score
+  // --- CLEAN HEALTH SCORE (Single Line) ---
   const healthEl = document.getElementById('healthScore');
   const budgetRatio = m.monthlyBudget > 0 ? (totalExp / m.monthlyBudget) : 0;
-  if(!m.income) healthEl.innerText = "Start by adding income";
-  else if(remainingVal < 0) healthEl.innerHTML = "🔴 <b>Critical</b> (Over budget)";
-  else if(budgetRatio > 0.9) healthEl.innerHTML = "🟡 <b>Warning</b> (Near limit)";
-  else healthEl.innerHTML = "🟢 <b>Healthy</b> (On track)";
+  
+  if(!m.income) healthEl.innerText = "Add Income 🟡";
+  else if(remainingVal < 0) healthEl.innerText = "Over Budget 🔴";
+  else if(budgetRatio > 0.9) healthEl.innerText = "Near Limit 🟡";
+  else healthEl.innerText = "On Track 🟢";
 
   const incomePct = m.income ? Math.min((totalExp / m.income) * 100, 100) : 0;
   document.getElementById('incomeBar').style.width = incomePct + "%";
@@ -1125,27 +1098,24 @@ function render(){
   // --- TABLE RENDER (With Search & Sort) ---
   const searchVal = document.getElementById('searchInput').value.toLowerCase();
   
-  // Filter
   let list = m.expenses.filter(e => 
       e.name.toLowerCase().includes(searchVal) || 
       e.category.toLowerCase().includes(searchVal)
   );
   
-  // Sort
   if(sortCol) {
       list.sort((a,b) => {
           let va = a[sortCol];
           let vb = b[sortCol];
           if(typeof va === 'string') va = va.toLowerCase();
           if(typeof vb === 'string') vb = vb.toLowerCase();
-          
           if(va < vb) return sortAsc ? -1 : 1;
           if(va > vb) return sortAsc ? 1 : -1;
           return 0;
       });
   }
   
-  currentDisplayedExpenses = list; // Store for update logic
+  currentDisplayedExpenses = list;
 
   const tbody = document.getElementById('expenseTable');
   tbody.innerHTML = list.map((e, i) => `
@@ -1206,20 +1176,17 @@ function renderAverageStats(currentMonthData, currentSpending) {
     
     if(totalDiff > 0) {
         msg += `<span class="avg-highlight">▲ +${formatMoney(totalDiff.toFixed(0))} vs avg.</span>`;
-        
         let maxDiff = 0;
         let culprit = "";
         let currentCatTotals = {};
         currentMonthData.expenses.filter(e => e.category !== "Saved").forEach(e => {
             currentCatTotals[e.category] = (currentCatTotals[e.category] || 0) + e.amount;
         });
-
         for (let cat in currentCatTotals) {
              let catAvg = (catSums[cat] || 0) / monthCount;
              let diff = currentCatTotals[cat] - catAvg;
              if(diff > maxDiff) { maxDiff = diff; culprit = cat; }
         }
-
         if(culprit && maxDiff > 100) {
             const icon = catIcons[culprit] || "";
             msg += `<span class="avg-culprit">Mainly due to: ${icon} ${culprit} (+${formatMoney(maxDiff.toFixed(0))})</span>`;
@@ -1233,8 +1200,8 @@ function renderAverageStats(currentMonthData, currentSpending) {
 function drawCharts(m){
   const cats = {};
   m.expenses.filter(e => e.category !== "Saved").forEach(e => {
-      const label = (catIcons[e.category] || "") + " " + e.category;
-      cats[label] = (cats[label] || 0) + e.amount;
+      // Clean key for matching
+      cats[e.category] = (cats[e.category] || 0) + e.amount;
   });
 
   const pieCtx = document.getElementById('pieChart').getContext('2d');
@@ -1242,10 +1209,13 @@ function drawCharts(m){
   
   const colors = ["#f48fb1", "#8fc7a4", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0", "#ffecb3", "#b39ddb"];
 
+  // Prepare Labels with Icons
+  const labelsWithIcons = Object.keys(cats).map(k => (catIcons[k] || "") + " " + k);
+
   pieChartInstance = new Chart(pieCtx, {
       type: "doughnut",
       data: {
-          labels: Object.keys(cats),
+          labels: labelsWithIcons, // Display Labels
           datasets: [{
               data: Object.values(cats),
               backgroundColor: colors,
@@ -1256,7 +1226,25 @@ function drawCharts(m){
       options: { 
           responsive: true, 
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } } 
+          plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } },
+          // === NEW: CLICK INTERACTION ===
+          onClick: (evt, elements) => {
+              if(elements.length > 0) {
+                  const idx = elements[0].index;
+                  const label = labelsWithIcons[idx]; // e.g. "🍔 Food"
+                  // Extract just the word part (Food)
+                  const categoryName = Object.keys(cats)[idx]; 
+                  
+                  // 1. Switch Tab
+                  showTab('expenses');
+                  // 2. Set Search
+                  const searchBox = document.getElementById('searchInput');
+                  searchBox.value = categoryName;
+                  // 3. Trigger Filter
+                  filterExpenses();
+                  showToast(`Showing ${categoryName} expenses`);
+              }
+          }
       }
   });
 
