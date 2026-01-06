@@ -57,7 +57,7 @@ body {
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.04);
-  height: 620px; /* Increased height slightly for new features */
+  height: 620px; 
   display: flex;
   flex-direction: column;
   position: relative;
@@ -224,6 +224,19 @@ input:focus, select:focus {
     margin-top: 16px;
     border: 1px solid #eeeeee;
 }
+/* New Flex Header for Import Button */
+.box-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.box-header-row h3 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 14px;
+}
+
 .add-expense-box input, 
 .add-expense-box select {
     background: #FFFFFF;
@@ -332,6 +345,7 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 }
 .avg-highlight { font-weight: 700; color: var(--strawberry-dark); }
 .avg-good { color: var(--matcha-dark); font-weight: 700; }
+.avg-culprit { display: block; margin-top: 4px; font-size: 11px; color: var(--text-light); }
 
 .sidebar-section { margin-bottom: 24px; }
 .summary-item {
@@ -404,9 +418,6 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 .remember-me input { width: auto; margin: 0; cursor: pointer; }
 
 /* Import Button */
-.import-btn-container {
-    display: flex; justify-content: flex-end; margin-bottom: 8px;
-}
 .btn-import {
     background: transparent; border: 1px solid var(--matcha); color: var(--matcha-dark);
     font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;
@@ -496,11 +507,11 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
             </div>
 
             <div class="add-expense-box">
-                <div class="import-btn-container">
-                    <button class="btn-import" onclick="importRecurring()">🔄 Import Fixed from Last Month</button>
+                <div class="box-header-row">
+                    <h3>Add New Expense</h3>
+                    <button class="btn-import" onclick="importRecurring()">🔄 Import Fixed</button>
                 </div>
 
-                <h3 style="margin-top:0; color: var(--text-main); margin-bottom: 12px; font-size: 14px;">Add New Expense</h3>
                 <div class="grid-4">
                     <div>
                         <label>Name</label>
@@ -881,18 +892,15 @@ function addExpense(){
 
 // === NEW FEATURE: Import Recurring ===
 function importRecurring() {
-    // 1. Calculate previous month string
     let d = new Date(currentMonth + "-01");
     d.setMonth(d.getMonth() - 1);
     const prevMonthStr = d.toISOString().slice(0,7);
     
-    // 2. Check if data exists
     if(!fullData[prevMonthStr] || !fullData[prevMonthStr].expenses) {
         alert("No data found for " + prevMonthStr);
         return;
     }
 
-    // 3. Filter "Fixed" expenses
     const fixedExpenses = fullData[prevMonthStr].expenses.filter(e => e.type === "Fixed");
     
     if(fixedExpenses.length === 0) {
@@ -905,14 +913,13 @@ function importRecurring() {
         let count = 0;
         
         fixedExpenses.forEach((e, index) => {
-            // Create copy
             m.expenses.push({
-                id: Date.now() + index, // Ensure unique ID
+                id: Date.now() + index, 
                 name: e.name,
                 amount: e.amount,
                 type: e.type,
                 category: e.category,
-                date: currentMonth + "-01" // Set to 1st of current month
+                date: currentMonth + "-01" 
             });
             count++;
         });
@@ -1004,17 +1011,17 @@ function render(){
     </tr>
   `).join("");
 
-  // RENDER AVERAGE STATS
-  renderAverageStats(totalExp);
+  // RENDER SMART AVERAGE STATS (With Category Breakdown)
+  renderAverageStats(m, totalExp);
 
   drawCharts(m);
 }
 
-// === NEW FEATURE: Calculate and Show Average ===
-function renderAverageStats(currentSpending) {
+// === NEW: Smart Stats (Detects the Category Culprit) ===
+function renderAverageStats(currentMonthData, currentSpending) {
     const box = document.getElementById('averageStats');
     
-    // Get all previous months
+    // 1. Get previous months
     const months = Object.keys(fullData).filter(m => m !== currentMonth && m < currentMonth);
     
     if(months.length === 0) {
@@ -1022,36 +1029,62 @@ function renderAverageStats(currentSpending) {
         return;
     }
 
-    let sum = 0;
-    let count = 0;
-    
+    // 2. Calculate Historical Totals per Category
+    let totalSum = 0;
+    let catSums = {};
+    let monthCount = months.length;
+
     months.forEach(mKey => {
         const monthData = fullData[mKey];
         if(monthData && monthData.expenses) {
-            const exp = monthData.expenses.filter(e => e.category !== "Saved").reduce((a,b) => a + b.amount, 0);
-            if(exp > 0) {
-                sum += exp;
-                count++;
-            }
+             const mExp = monthData.expenses.filter(e => e.category !== "Saved");
+             const mTotal = mExp.reduce((a,b) => a + b.amount, 0);
+             totalSum += mTotal;
+             
+             mExp.forEach(e => {
+                 catSums[e.category] = (catSums[e.category] || 0) + e.amount;
+             });
         }
     });
 
-    if(count === 0) {
-        box.classList.add('hidden');
-        return;
-    }
+    const avgTotal = totalSum / monthCount;
+    const totalDiff = currentSpending - avgTotal;
 
-    const avg = sum / count;
-    const diff = currentSpending - avg;
-    
     box.classList.remove('hidden');
+
+    let msg = `Average: <strong>${formatMoney(avgTotal.toFixed(0))}</strong>. `;
     
-    let msg = `Your average spending is <strong>${formatMoney(avg.toFixed(0))}</strong>. <br>`;
-    
-    if(diff > 0) {
-        msg += `<span class="avg-highlight">▲ You are spending ${formatMoney(diff.toFixed(0))} more than usual.</span>`;
+    if(totalDiff > 0) {
+        msg += `<span class="avg-highlight">▲ +${formatMoney(totalDiff.toFixed(0))} vs avg.</span>`;
+        
+        // --- CULPRIT DETECTOR ---
+        // Find which category has the highest POSITIVE difference vs its average
+        let maxDiff = 0;
+        let culprit = "";
+        
+        // Calculate current month category totals
+        let currentCatTotals = {};
+        currentMonthData.expenses.filter(e => e.category !== "Saved").forEach(e => {
+            currentCatTotals[e.category] = (currentCatTotals[e.category] || 0) + e.amount;
+        });
+
+        // Compare
+        for (let cat in currentCatTotals) {
+             let catAvg = (catSums[cat] || 0) / monthCount;
+             let diff = currentCatTotals[cat] - catAvg;
+             if(diff > maxDiff) {
+                 maxDiff = diff;
+                 culprit = cat;
+             }
+        }
+
+        if(culprit && maxDiff > 100) { // Only show if diff is significant (>100)
+            const icon = catIcons[culprit] || "";
+            msg += `<span class="avg-culprit">Mainly due to: ${icon} ${culprit} (+${formatMoney(maxDiff.toFixed(0))})</span>`;
+        }
+        
     } else {
-        msg += `<span class="avg-good">▼ You are spending ${formatMoney(Math.abs(diff).toFixed(0))} less than usual.</span>`;
+        msg += `<span class="avg-good">▼ -${formatMoney(Math.abs(totalDiff).toFixed(0))} vs avg.</span>`;
     }
     
     box.innerHTML = msg;
