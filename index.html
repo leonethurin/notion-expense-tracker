@@ -34,7 +34,6 @@ body {
   background: var(--bg-color);
   color: var(--text-main);
   margin: 0;
-  /* Default desktop: centered & fixed height */
   height: 100vh; 
   display: flex;
   align-items: center;
@@ -74,24 +73,23 @@ body {
 @media (max-width: 850px) {
     body {
         height: auto; 
-        overflow-y: auto; /* Allow scroll on mobile */
+        overflow-y: auto; 
         align-items: flex-start; 
         padding-top: 20px;
         padding-bottom: 40px;
     }
     
     .container {
-        grid-template-columns: 1fr; /* Stack into 1 column */
+        grid-template-columns: 1fr; 
         display: flex;
         flex-direction: column;
     }
 
     .main-card, .sidebar-card {
-        height: auto; /* Auto height to fit content */
+        height: auto; 
         min-height: 500px;
     }
 
-    /* Stack charts on mobile */
     .charts-area {
         flex-direction: column; 
         height: auto !important;
@@ -102,7 +100,6 @@ body {
         margin-bottom: 20px;
     }
     
-    /* Make inputs larger on mobile to prevent zoom */
     input, select { font-size: 16px !important; }
 }
 
@@ -208,7 +205,6 @@ body {
     overflow: hidden;
     padding: 2px;
 }
-/* Allow tab content to expand on mobile */
 @media (max-width: 850px) {
     .tab-content { overflow: visible; }
 }
@@ -305,7 +301,7 @@ input:focus, select:focus {
 /* TABLE */
 .table-container {
     height: 100%; 
-    min-height: 300px; /* Ensure visibility on mobile */
+    min-height: 300px;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     overflow: hidden; 
@@ -380,9 +376,8 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-4 { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; }
 
-/* Mobile Grid adjustments */
 @media (max-width: 600px) {
-    .grid-4 { grid-template-columns: 1fr 1fr; } /* 2 cols on mobile for expense input */
+    .grid-4 { grid-template-columns: 1fr 1fr; } 
 }
 
 /* --- SCREENS --- */
@@ -406,6 +401,18 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
     text-decoration: underline; cursor: pointer;
 }
 
+/* Remember me Checkbox */
+.remember-me {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+.remember-me input { width: auto; margin: 0; cursor: pointer; }
+
 </style>
 </head>
 
@@ -425,6 +432,12 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
       <input type="text" id="pantryIdInput" class="setup-input" placeholder="Paste ID here..." />
       <button class="btn-primary" style="width:300px" onclick="savePantryId()">Start Tracking</button>
+      
+      <label class="remember-me">
+          <input type="checkbox" id="rememberMeCheck" checked> 
+          Keep me signed in on this device
+      </label>
+
       <button id="cancelSetupBtn" class="btn-secondary hidden" style="width:300px" onclick="closeSetup()">Cancel</button>
   </div>
 
@@ -620,10 +633,15 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
 <script>
 // ==========================================
-// CONFIG
+// CONFIG: HARDCODE ID FOR AUTO-LOGIN
 // ==========================================
+// PASTE YOUR ID HERE TO NEVER LOGIN AGAIN:
+const HARDCODED_PANTRY_ID = ""; 
+// Example: const HARDCODED_PANTRY_ID = "d345f...";
+// ==========================================
+
 const BASKET_NAME = "expenseTracker"; 
-let userPantryId = localStorage.getItem("userPantryId"); 
+let userPantryId = null; 
 
 let fullData = {}; 
 let settings = { currency: "kr" };
@@ -635,17 +653,38 @@ initMonths();
 initApp();
 
 function initApp() {
-    if(!userPantryId || userPantryId === "null" || userPantryId === "undefined") {
-        document.getElementById('setupScreen').classList.remove('hidden');
-        document.getElementById('loadingOverlay').classList.add('hidden');
-        document.getElementById('cancelSetupBtn').classList.add('hidden');
-    } else {
+    // 1. Check Hardcoded ID first
+    if(HARDCODED_PANTRY_ID && HARDCODED_PANTRY_ID.length > 5) {
+        userPantryId = HARDCODED_PANTRY_ID;
         loadData();
+        return;
     }
+
+    // 2. Check LocalStorage (Persistent)
+    const stored = localStorage.getItem("userPantryId");
+    if(stored) {
+        userPantryId = stored;
+        loadData();
+        return;
+    }
+
+    // 3. Check SessionStorage (Temporary)
+    const session = sessionStorage.getItem("userPantryId");
+    if(session) {
+        userPantryId = session;
+        loadData();
+        return;
+    }
+
+    // 4. Show Login
+    document.getElementById('setupScreen').classList.remove('hidden');
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('cancelSetupBtn').classList.add('hidden');
 }
 
 function forceReset() {
     localStorage.removeItem("userPantryId");
+    sessionStorage.removeItem("userPantryId");
     userPantryId = null;
     document.getElementById('loadingOverlay').classList.add('hidden');
     document.getElementById('setupScreen').classList.remove('hidden');
@@ -654,12 +693,22 @@ function forceReset() {
 
 function savePantryId() {
     const input = document.getElementById('pantryIdInput').value.trim();
+    const remember = document.getElementById('rememberMeCheck').checked;
+
     if(input.length < 5) {
         alert("Please enter a valid Pantry ID.");
         return;
     }
+    
     userPantryId = input;
-    localStorage.setItem("userPantryId", userPantryId);
+    
+    // Save based on checkbox
+    if(remember) {
+        localStorage.setItem("userPantryId", userPantryId);
+    } else {
+        sessionStorage.setItem("userPantryId", userPantryId);
+    }
+
     document.getElementById('setupScreen').classList.add('hidden');
     loadData();
 }
