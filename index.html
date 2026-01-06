@@ -57,7 +57,7 @@ body {
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.04);
-  height: 620px; 
+  height: 640px; 
   display: flex;
   flex-direction: column;
   position: relative;
@@ -224,7 +224,6 @@ input:focus, select:focus {
     margin-top: 16px;
     border: 1px solid #eeeeee;
 }
-/* New Flex Header for Import Button */
 .box-header-row {
     display: flex;
     justify-content: space-between;
@@ -288,6 +287,20 @@ input:focus, select:focus {
 }
 .btn-delete:hover { background: #ffebee; }
 
+/* TABLE & SEARCH */
+.table-controls {
+    display: flex;
+    margin-bottom: 10px;
+    gap: 10px;
+}
+#searchInput {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+
 .table-container {
     height: 100%; 
     min-height: 300px;
@@ -306,7 +319,10 @@ th {
   background: #fff; text-align: left; padding: 12px; font-size: 11px;
   color: var(--text-light); font-weight: 600; position: sticky; top: 0;
   border-bottom: 1px solid var(--border-color); z-index: 10;
+  cursor: pointer; /* Clickable headers */
+  user-select: none;
 }
+th:hover { background: #f9f9f9; color: var(--strawberry-dark); }
 td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); font-size: 13px; vertical-align: middle; }
 td input, td select {
     padding: 5px; font-size: 13px; margin: -5px; width: calc(100% + 10px);
@@ -417,12 +433,41 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 }
 .remember-me input { width: auto; margin: 0; cursor: pointer; }
 
-/* Import Button */
 .btn-import {
     background: transparent; border: 1px solid var(--matcha); color: var(--matcha-dark);
     font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;
 }
 .btn-import:hover { background: var(--matcha-light); }
+
+/* --- TOAST NOTIFICATIONS --- */
+#toastContainer {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+.toast {
+    background: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast-success { background: var(--matcha-dark); }
+.toast-error { background: var(--strawberry-dark); }
 
 </style>
 </head>
@@ -457,6 +502,8 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
       <div id="loadingMsg" style="font-size:12px; color:#999; margin-top:5px;">Checking Pantry ID...</div>
       <a class="reset-link" onclick="forceReset()">Stuck? Click here to enter ID</a>
   </div>
+  
+  <div id="toastContainer"></div>
 
   <div class="container">
     
@@ -548,14 +595,18 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
         </div>
 
         <div id="expenses" class="tab-content hidden">
+            <div class="table-controls">
+                <input id="searchInput" placeholder="Search expenses..." onkeyup="filterExpenses()" style="width:100%">
+            </div>
+
             <div class="table-container">
                 <div class="expenses-scroll">
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:120px;">Date</th>
-                                <th>Name</th>
-                                <th style="width:90px;">Amount</th>
+                                <th style="width:120px;" onclick="sortExpenses('date')">Date ↕</th>
+                                <th onclick="sortExpenses('name')">Name ↕</th>
+                                <th style="width:90px;" onclick="sortExpenses('amount')">Amount ↕</th>
                                 <th style="width:80px;">Type</th>
                                 <th style="width:120px;">Category</th>
                                 <th style="width:30px;"></th>
@@ -592,8 +643,7 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
                 </div>
             </div>
 
-            <div id="averageStats" class="average-stats-box hidden">
-                </div>
+            <div id="averageStats" class="average-stats-box hidden"></div>
         </div>
 
     </div>
@@ -613,6 +663,10 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
             <div class="summary-item sum-green">
                 <span>Saved</span>
                 <span id="sSaved">0</span>
+            </div>
+            <div class="summary-item" style="background: #fdfdfd; border:1px solid #eee; margin-top:12px;">
+                <span>Financial Health</span>
+                <span id="healthScore">Calculating...</span>
             </div>
         </div>
 
@@ -708,7 +762,7 @@ function savePantryId() {
     const remember = document.getElementById('rememberMeCheck').checked;
 
     if(input.length < 5) {
-        alert("Please enter a valid Pantry ID.");
+        showToast("Please enter a valid Pantry ID", "error");
         return;
     }
     userPantryId = input;
@@ -734,6 +788,24 @@ function setStatus(state) {
     if(state === 'loading') dot.className = "status-dot status-yellow";
     else if (state === 'saved') dot.className = "status-dot status-green";
     else dot.className = "status-dot status-red";
+}
+
+// === TOAST NOTIFICATION SYSTEM ===
+function showToast(message, type = "success") {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'toast-error' : 'toast-success'}`;
+    toast.innerHTML = type === 'error' ? `⚠️ ${message}` : `✅ ${message}`;
+    container.appendChild(toast);
+
+    // Trigger animation
+    setTimeout(() => toast.classList.add('show'), 10);
+    
+    // Remove after 3s
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
 async function loadData() {
@@ -765,6 +837,7 @@ async function loadData() {
         document.getElementById('loadingOverlay').classList.add('hidden');
         setStatus('saved');
         render();
+        showToast("Data Synced");
 
     } catch(e) {
         console.error(e);
@@ -806,6 +879,7 @@ async function saveData() {
         setStatus('saved');
     } catch(e) {
         setStatus('error');
+        showToast("Save Failed", "error");
     }
 }
 
@@ -852,6 +926,7 @@ function changeCurrency() {
     settings.currency = document.getElementById('currencySelect').value;
     saveData();
     render();
+    showToast("Currency Updated");
 }
 
 function saveMetaLocally(){
@@ -870,7 +945,7 @@ function addExpense(){
   const catVal = document.getElementById('inputCategory').value;
 
   if(!nameVal || !amountVal) {
-      alert("Please enter name and amount");
+      showToast("Enter name and amount", "error");
       return;
   }
 
@@ -888,30 +963,30 @@ function addExpense(){
   
   saveData(); 
   render();
+  showToast("Expense Added");
 }
 
-// === NEW FEATURE: Import Recurring ===
+// === FEATURE: Import Recurring ===
 function importRecurring() {
     let d = new Date(currentMonth + "-01");
     d.setMonth(d.getMonth() - 1);
     const prevMonthStr = d.toISOString().slice(0,7);
     
     if(!fullData[prevMonthStr] || !fullData[prevMonthStr].expenses) {
-        alert("No data found for " + prevMonthStr);
+        showToast("No data for " + prevMonthStr, "error");
         return;
     }
 
     const fixedExpenses = fullData[prevMonthStr].expenses.filter(e => e.type === "Fixed");
     
     if(fixedExpenses.length === 0) {
-        alert("No fixed expenses found in " + prevMonthStr);
+        showToast("No fixed expenses in " + prevMonthStr, "error");
         return;
     }
 
-    if(confirm(`Found ${fixedExpenses.length} fixed expenses in ${prevMonthStr}. Import them to this month?`)) {
+    if(confirm(`Found ${fixedExpenses.length} fixed expenses in ${prevMonthStr}. Import?`)) {
         const m = getMonth();
         let count = 0;
-        
         fixedExpenses.forEach((e, index) => {
             m.expenses.push({
                 id: Date.now() + index, 
@@ -923,30 +998,86 @@ function importRecurring() {
             });
             count++;
         });
-
         saveData();
         render();
-        alert(`Successfully imported ${count} expenses.`);
+        showToast(`Imported ${count} expenses`);
     }
 }
 
 window.updateExpense = function(index, field, element) {
     const m = getMonth();
+    
+    // We need to find the actual expense in the array based on filtered view or raw index
+    // Note: The simple implementation assumes index maps directly, 
+    // but with search/sort we must be careful.
+    // For safety in this version, render passes the ARRAY index, 
+    // but filtering/sorting modifies displayed order.
+    // *FIX*: filterExpenses() creates a temporary view, we need to map back to original ID.
+    // However, to keep it simple, we will disable inline editing while searching
+    // OR we just re-render on search clear.
+    
+    // Actually, sorting modifies the VIEW, not the Data.
+    // So we need to handle updates carefully.
+    // SIMPLE FIX: If searching/sorting is active, we find the item by ID.
+    
+    // We will use the 'data-id' attribute approach in a robust app, 
+    // but here we stick to simple index unless sorted.
+    // Let's assume standard order unless sorted.
+    
+    // To make this robust: We will refresh the whole render on change.
+    
+    // For now, simple direct update:
+    // If sorted, this might update wrong item. 
+    // To fix properly:
+    // We will use the ID stored in the row button.
+    
+    // But since `element` is the input, we can't easily pass ID without changing HTML gen significantly.
+    // Let's rely on standard order for now (Search disables sort/edit visually or we reset).
+    
     let val = element.value;
     if(field === 'amount') val = Number(val);
-    m.expenses[index][field] = val;
-    render(); 
-    clearTimeout(saveTimeout);
-    setStatus('loading');
-    saveTimeout = setTimeout(saveData, 2000); 
+    
+    // If we are sorted or searched, 'index' passed here is actually the index in 'filteredExpenses'.
+    // We need to find the real index in m.expenses.
+    
+    const displayedItem = currentDisplayedExpenses[index];
+    const realIndex = m.expenses.findIndex(e => e.id === displayedItem.id);
+    
+    if(realIndex !== -1) {
+        m.expenses[realIndex][field] = val;
+        // Don't full render, just save
+        clearTimeout(saveTimeout);
+        setStatus('loading');
+        saveTimeout = setTimeout(saveData, 2000); 
+    }
 }
 
-function deleteExpense(i){
-  if(confirm("Delete this expense?")){
-      getMonth().expenses.splice(i,1);
-      saveData();
-      render();
-  }
+function deleteExpense(id){
+    // Using ID instead of Index to be safe with sorting/searching
+    const m = getMonth();
+    const realIndex = m.expenses.findIndex(e => e.id === id);
+    
+    if(realIndex !== -1 && confirm("Delete this expense?")){
+        m.expenses.splice(realIndex, 1);
+        saveData();
+        render(); // Re-render to update list
+        showToast("Expense Deleted");
+    }
+}
+
+// === SORT & FILTER STATE ===
+let sortCol = null;
+let sortAsc = true;
+let currentDisplayedExpenses = [];
+
+function sortExpenses(col) {
+    if(sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = true; }
+    render();
+}
+
+function filterExpenses() {
+    render();
 }
 
 let pieChartInstance, lineChartInstance;
@@ -954,6 +1085,7 @@ let pieChartInstance, lineChartInstance;
 function render(){
   const m = getMonth();
   
+  // Fill inputs
   if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
   if(document.activeElement.id !== 'monthlyBudget') document.getElementById('monthlyBudget').value = m.monthlyBudget || "";
   if(document.activeElement.id !== 'monthlySavingsGoal') document.getElementById('monthlySavingsGoal').value = m.monthlySavingsGoal || "";
@@ -974,6 +1106,14 @@ function render(){
 
   document.getElementById('remaining').textContent = formatMoney(remainingVal.toFixed(2));
 
+  // Health Score
+  const healthEl = document.getElementById('healthScore');
+  const budgetRatio = m.monthlyBudget > 0 ? (totalExp / m.monthlyBudget) : 0;
+  if(!m.income) healthEl.innerText = "Start by adding income";
+  else if(remainingVal < 0) healthEl.innerHTML = "🔴 <b>Critical</b> (Over budget)";
+  else if(budgetRatio > 0.9) healthEl.innerHTML = "🟡 <b>Warning</b> (Near limit)";
+  else healthEl.innerHTML = "🟢 <b>Healthy</b> (On track)";
+
   const incomePct = m.income ? Math.min((totalExp / m.income) * 100, 100) : 0;
   document.getElementById('incomeBar').style.width = incomePct + "%";
   document.getElementById('incomeUsageText').textContent = incomePct.toFixed(0) + "% used";
@@ -982,9 +1122,33 @@ function render(){
   document.getElementById('saveBar').style.width = goalPct + "%";
   document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
 
-  // Table
+  // --- TABLE RENDER (With Search & Sort) ---
+  const searchVal = document.getElementById('searchInput').value.toLowerCase();
+  
+  // Filter
+  let list = m.expenses.filter(e => 
+      e.name.toLowerCase().includes(searchVal) || 
+      e.category.toLowerCase().includes(searchVal)
+  );
+  
+  // Sort
+  if(sortCol) {
+      list.sort((a,b) => {
+          let va = a[sortCol];
+          let vb = b[sortCol];
+          if(typeof va === 'string') va = va.toLowerCase();
+          if(typeof vb === 'string') vb = vb.toLowerCase();
+          
+          if(va < vb) return sortAsc ? -1 : 1;
+          if(va > vb) return sortAsc ? 1 : -1;
+          return 0;
+      });
+  }
+  
+  currentDisplayedExpenses = list; // Store for update logic
+
   const tbody = document.getElementById('expenseTable');
-  tbody.innerHTML = m.expenses.map((e, i) => `
+  tbody.innerHTML = list.map((e, i) => `
     <tr>
       <td><input type="date" value="${e.date}" onchange="updateExpense(${i}, 'date', this)"></td>
       <td><input type="text" value="${e.name}" onchange="updateExpense(${i}, 'name', this)"></td>
@@ -1007,29 +1171,20 @@ function render(){
             <option value="Other" ${e.category=="Other"?"selected":""}>📦 Other</option>
         </select>
       </td>
-      <td><button class="btn-delete" onclick="deleteExpense(${i})">✕</button></td>
+      <td><button class="btn-delete" onclick="deleteExpense(${e.id})">✕</button></td>
     </tr>
   `).join("");
 
-  // RENDER SMART AVERAGE STATS (With Category Breakdown)
   renderAverageStats(m, totalExp);
-
   drawCharts(m);
 }
 
-// === NEW: Smart Stats (Detects the Category Culprit) ===
 function renderAverageStats(currentMonthData, currentSpending) {
     const box = document.getElementById('averageStats');
-    
-    // 1. Get previous months
     const months = Object.keys(fullData).filter(m => m !== currentMonth && m < currentMonth);
     
-    if(months.length === 0) {
-        box.classList.add('hidden');
-        return;
-    }
+    if(months.length === 0) { box.classList.add('hidden'); return; }
 
-    // 2. Calculate Historical Totals per Category
     let totalSum = 0;
     let catSums = {};
     let monthCount = months.length;
@@ -1038,12 +1193,8 @@ function renderAverageStats(currentMonthData, currentSpending) {
         const monthData = fullData[mKey];
         if(monthData && monthData.expenses) {
              const mExp = monthData.expenses.filter(e => e.category !== "Saved");
-             const mTotal = mExp.reduce((a,b) => a + b.amount, 0);
-             totalSum += mTotal;
-             
-             mExp.forEach(e => {
-                 catSums[e.category] = (catSums[e.category] || 0) + e.amount;
-             });
+             totalSum += mExp.reduce((a,b) => a + b.amount, 0);
+             mExp.forEach(e => { catSums[e.category] = (catSums[e.category] || 0) + e.amount; });
         }
     });
 
@@ -1051,42 +1202,31 @@ function renderAverageStats(currentMonthData, currentSpending) {
     const totalDiff = currentSpending - avgTotal;
 
     box.classList.remove('hidden');
-
     let msg = `Average: <strong>${formatMoney(avgTotal.toFixed(0))}</strong>. `;
     
     if(totalDiff > 0) {
         msg += `<span class="avg-highlight">▲ +${formatMoney(totalDiff.toFixed(0))} vs avg.</span>`;
         
-        // --- CULPRIT DETECTOR ---
-        // Find which category has the highest POSITIVE difference vs its average
         let maxDiff = 0;
         let culprit = "";
-        
-        // Calculate current month category totals
         let currentCatTotals = {};
         currentMonthData.expenses.filter(e => e.category !== "Saved").forEach(e => {
             currentCatTotals[e.category] = (currentCatTotals[e.category] || 0) + e.amount;
         });
 
-        // Compare
         for (let cat in currentCatTotals) {
              let catAvg = (catSums[cat] || 0) / monthCount;
              let diff = currentCatTotals[cat] - catAvg;
-             if(diff > maxDiff) {
-                 maxDiff = diff;
-                 culprit = cat;
-             }
+             if(diff > maxDiff) { maxDiff = diff; culprit = cat; }
         }
 
-        if(culprit && maxDiff > 100) { // Only show if diff is significant (>100)
+        if(culprit && maxDiff > 100) {
             const icon = catIcons[culprit] || "";
             msg += `<span class="avg-culprit">Mainly due to: ${icon} ${culprit} (+${formatMoney(maxDiff.toFixed(0))})</span>`;
         }
-        
     } else {
         msg += `<span class="avg-good">▼ -${formatMoney(Math.abs(totalDiff).toFixed(0))} vs avg.</span>`;
     }
-    
     box.innerHTML = msg;
 }
 
