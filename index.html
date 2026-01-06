@@ -507,6 +507,11 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
   <div id="loadingOverlay" class="overlay-screen hidden">
       <h3 style="color:var(--matcha-dark)">Syncing...</h3>
       <div id="loadingMsg" style="font-size:12px; color:#999; margin-top:5px;">Checking Pantry ID...</div>
+      
+      <div id="emergencyReset" class="hidden" style="margin-top:20px;">
+          <button class="btn-secondary" onclick="forceReset()">Taking too long? Reset Connection</button>
+      </div>
+
       <a class="reset-link" onclick="forceReset()">Stuck? Click here to enter ID</a>
   </div>
   
@@ -812,31 +817,48 @@ function showToast(message, type = "success") {
     }, 3000);
 }
 
+// === ROBUST DATA LOADING ===
 async function loadData() {
     document.getElementById('loadingOverlay').classList.remove('hidden');
+    document.getElementById('emergencyReset').classList.add('hidden');
     setStatus('loading');
+    
+    // Safety timeout: If loading takes > 3s, show reset button
+    const safetyTimer = setTimeout(() => {
+        document.getElementById('emergencyReset').classList.remove('hidden');
+    }, 3000);
     
     try {
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
-        const res = await fetch(url);
+        
+        // Add timeout to fetch
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 8000); // 8 sec timeout
+        
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(id);
         
         if(!res.ok) {
-            console.log("Basket not found, creating...");
-            const initSuccess = await createInitialBasket();
-            if(initSuccess) {
-                document.getElementById('loadingOverlay').classList.add('hidden');
-                setStatus('saved');
-                render();
-                return;
-            } else {
-                throw new Error("Init Failed");
+            // If basket missing, create it. If 401/403/500, throw error.
+            if(res.status === 404 || res.status === 400) {
+                 console.log("Basket not found, creating...");
+                 const initSuccess = await createInitialBasket();
+                 if(initSuccess) {
+                     clearTimeout(safetyTimer);
+                     document.getElementById('loadingOverlay').classList.add('hidden');
+                     setStatus('saved');
+                     render();
+                     return;
+                 }
             }
+            throw new Error(`Server Error: ${res.status}`);
         }
 
         const json = await res.json();
         fullData = json.data || {};
         settings = json.settings || { currency: "kr" };
         
+        clearTimeout(safetyTimer);
         document.getElementById('currencySelect').value = settings.currency;
         document.getElementById('loadingOverlay').classList.add('hidden');
         setStatus('saved');
@@ -844,8 +866,11 @@ async function loadData() {
         showToast("Data Synced");
 
     } catch(e) {
+        clearTimeout(safetyTimer);
         console.error(e);
-        document.getElementById('loadingMsg').innerText = "Connection failed. Check ID.";
+        document.getElementById('loadingMsg').innerText = "Connection failed: " + e.message;
+        // Show reset button immediately on error
+        document.getElementById('emergencyReset').classList.remove('hidden');
         setStatus('error');
     }
 }
