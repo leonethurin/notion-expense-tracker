@@ -368,12 +368,26 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
     display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px;
 }
-/* Health score specific to make it blend in */
+
+/* UPDATED: Health score styling */
 .summary-item.health-item {
-    background: transparent; 
-    border: 1px solid transparent; /* Match layout */
-    margin-top: 8px;
+    background: var(--strawberry);
+    color: white;
+    margin-top: 12px;
+    box-shadow: 0 4px 12px rgba(244, 143, 177, 0.3);
 }
+/* Label (Health) - BOLD */
+.summary-item.health-item span:first-child {
+    font-weight: 700;
+    font-size: 14px;
+}
+/* Status (On Track) - NORMAL WEIGHT */
+.summary-item.health-item span:last-child {
+    font-weight: 500;
+    font-size: 13px;
+    opacity: 0.95;
+}
+
 
 .sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
 .sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
@@ -823,7 +837,6 @@ async function loadData() {
     document.getElementById('emergencyReset').classList.add('hidden');
     setStatus('loading');
     
-    // Safety timeout: If loading takes > 3s, show reset button
     const safetyTimer = setTimeout(() => {
         document.getElementById('emergencyReset').classList.remove('hidden');
     }, 3000);
@@ -831,15 +844,13 @@ async function loadData() {
     try {
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
         
-        // Add timeout to fetch
         const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 8000); // 8 sec timeout
+        const id = setTimeout(() => controller.abort(), 8000); 
         
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(id);
         
         if(!res.ok) {
-            // If basket missing, create it. If 401/403/500, throw error.
             if(res.status === 404 || res.status === 400) {
                  console.log("Basket not found, creating...");
                  const initSuccess = await createInitialBasket();
@@ -869,7 +880,6 @@ async function loadData() {
         clearTimeout(safetyTimer);
         console.error(e);
         document.getElementById('loadingMsg').innerText = "Connection failed: " + e.message;
-        // Show reset button immediately on error
         document.getElementById('emergencyReset').classList.remove('hidden');
         setStatus('error');
     }
@@ -1038,7 +1048,6 @@ window.updateExpense = function(index, field, element) {
     let val = element.value;
     if(field === 'amount') val = Number(val);
     
-    // Find real item based on what's displayed (handles sort/filter)
     const displayedItem = currentDisplayedExpenses[index];
     if(!displayedItem) return;
     
@@ -1225,7 +1234,6 @@ function renderAverageStats(currentMonthData, currentSpending) {
 function drawCharts(m){
   const cats = {};
   m.expenses.filter(e => e.category !== "Saved").forEach(e => {
-      // Clean key for matching
       cats[e.category] = (cats[e.category] || 0) + e.amount;
   });
 
@@ -1233,14 +1241,12 @@ function drawCharts(m){
   if(pieChartInstance) pieChartInstance.destroy();
   
   const colors = ["#f48fb1", "#8fc7a4", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0", "#ffecb3", "#b39ddb"];
-
-  // Prepare Labels with Icons
   const labelsWithIcons = Object.keys(cats).map(k => (catIcons[k] || "") + " " + k);
 
   pieChartInstance = new Chart(pieCtx, {
       type: "doughnut",
       data: {
-          labels: labelsWithIcons, // Display Labels
+          labels: labelsWithIcons,
           datasets: [{
               data: Object.values(cats),
               backgroundColor: colors,
@@ -1252,20 +1258,13 @@ function drawCharts(m){
           responsive: true, 
           maintainAspectRatio: false,
           plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } },
-          // === NEW: CLICK INTERACTION ===
           onClick: (evt, elements) => {
               if(elements.length > 0) {
                   const idx = elements[0].index;
-                  const label = labelsWithIcons[idx]; // e.g. "🍔 Food"
-                  // Extract just the word part (Food)
                   const categoryName = Object.keys(cats)[idx]; 
-                  
-                  // 1. Switch Tab
                   showTab('expenses');
-                  // 2. Set Search
                   const searchBox = document.getElementById('searchInput');
                   searchBox.value = categoryName;
-                  // 3. Trigger Filter
                   filterExpenses();
                   showToast(`Showing ${categoryName} expenses`);
               }
