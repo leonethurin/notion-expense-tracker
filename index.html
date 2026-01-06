@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
+/* --- 1. CORE VARIABLES & RESET --- */
 :root {
   --matcha: #8fc7a4;
   --matcha-dark: #669e7c; 
@@ -23,7 +24,6 @@
   --input-bg: #f3f4f6; 
   --border-color: #ebebeb;
 }
-
 * { box-sizing: border-box; }
 
 body {
@@ -38,16 +38,12 @@ body {
   overflow: hidden; 
 }
 
-.app {
-  width: 100%;
-  max-width: 1100px;
-  padding: 0 20px;
-  position: relative;
-}
+/* --- 2. LAYOUT GRID --- */
+.app { width: 100%; max-width: 1100px; padding: 0 20px; position: relative; }
 
 .container {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 320px; /* Main content | Sidebar */
   gap: 20px;
 }
 
@@ -64,7 +60,7 @@ body {
   overflow: hidden; 
 }
 
-/* RESPONSIVE LAYOUT */
+/* --- 3. RESPONSIVE (Mobile) --- */
 @media (max-width: 850px) {
     body { height: auto; overflow-y: auto; align-items: flex-start; padding-top: 20px; padding-bottom: 40px; }
     .container { grid-template-columns: 1fr; display: flex; flex-direction: column; }
@@ -74,13 +70,11 @@ body {
     input, select { font-size: 16px !important; }
 }
 
+/* --- 4. HEADER & TABS --- */
 .card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-shrink: 0; flex-wrap: wrap; gap: 10px; }
 .header-controls { display: flex; gap: 8px; align-items: center; }
 
-#syncStatus {
-    font-size: 11px; font-weight: 600; color: var(--text-light);
-    display: flex; align-items: center; gap: 6px; margin-right: 6px; cursor: pointer;
-}
+#syncStatus { font-size: 11px; font-weight: 600; color: var(--text-light); display: flex; align-items: center; gap: 6px; margin-right: 6px; }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
 .status-green { background: var(--matcha-dark); box-shadow: 0 0 5px var(--matcha); }
 .status-yellow { background: #fbc02d; }
@@ -94,10 +88,9 @@ body {
 .tabs button.active { background: white; color: var(--strawberry-dark); box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: 600; }
 
 .header-select { width: auto; min-width: 80px; border: none; background: #f4f4f5; padding: 6px 12px; border-radius: 8px; font-weight: 600; color: var(--text-main); cursor: pointer; font-size: 13px; }
-.header-select:hover { background: #eaeaeb; }
 
+/* --- 5. FORMS & INPUTS --- */
 .tab-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 2px; }
-@media (max-width: 850px) { .tab-content { overflow: visible; } }
 .hidden { display: none !important; }
 
 label { display: block; font-size: 11px; font-weight: 700; color: var(--text-light); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -107,28 +100,25 @@ input:focus, select:focus { outline: none; background: #fff; border-color: var(-
 .add-expense-box { background: #FAFAFA; padding: 18px; border-radius: 12px; margin-top: 16px; border: 1px solid #eeeeee; }
 .box-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .box-header-row h3 { margin: 0; color: var(--text-main); font-size: 14px; }
-
 .add-expense-box input, .add-expense-box select { background: #FFFFFF; border: 1px solid #e0e0e0; }
 .add-expense-box input:focus, .add-expense-box select:focus { border-color: var(--strawberry); }
 
 .btn-primary { background: var(--strawberry); color: white; border: none; border-radius: 8px; padding: 10px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 14px; font-size: 14px; transition: transform 0.1s, background 0.2s; box-shadow: 0 4px 10px rgba(244, 143, 177, 0.3); }
 .btn-primary:hover { background: var(--strawberry-hover); transform: translateY(-1px); }
 
-.btn-secondary { background: transparent; border: 1px solid #ccc; color: var(--text-light); border-radius: 8px; padding: 8px; font-weight: 600; cursor: pointer; font-size: 13px; margin-top: 8px; transition: 0.2s; }
-.btn-secondary:hover { background: #eee; color: var(--text-main); }
-
-.btn-delete { background: transparent; color: #ff6b6b; border: none; font-size: 14px; cursor: pointer; padding: 4px; border-radius: 4px; }
-.btn-delete:hover { background: #ffebee; }
 .btn-import { background: transparent; border: 1px solid var(--matcha); color: var(--matcha-dark); font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .btn-import:hover { background: var(--matcha-light); }
 
+.btn-delete { background: transparent; color: #ff6b6b; border: none; font-size: 14px; cursor: pointer; padding: 4px; border-radius: 4px; }
+.btn-delete:hover { background: #ffebee; }
+
+/* --- 6. TABLE & SEARCH --- */
 .table-controls { display: flex; margin-bottom: 10px; gap: 10px; }
 #searchInput { background: #fff; border: 1px solid #e0e0e0; padding: 8px 12px; font-size: 13px; border-radius: 8px; }
 
 .table-container { height: 100%; min-height: 300px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
 .expenses-scroll { overflow-y: auto; flex: 1; }
 .expenses-scroll::-webkit-scrollbar { width: 6px; }
-.expenses-scroll::-webkit-scrollbar-track { background: transparent; }
 .expenses-scroll::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
 table { width: 100%; border-collapse: collapse; }
 th { background: #fff; text-align: left; padding: 12px; font-size: 11px; color: var(--text-light); font-weight: 600; position: sticky; top: 0; border-bottom: 1px solid var(--border-color); z-index: 10; cursor: pointer; user-select: none; }
@@ -138,6 +128,7 @@ td input, td select { padding: 5px; font-size: 13px; margin: -5px; width: calc(1
 td input:hover, td select:hover { background: #f5f5f5; }
 td input:focus, td select:focus { background: white; border-color: var(--strawberry); box-shadow: none; }
 
+/* --- 7. DASHBOARD & CHARTS --- */
 .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; flex-shrink: 0; }
 .kpi-card { border-radius: 12px; padding: 14px; text-align: center; color: white; }
 .kpi-card h4 { margin: 0 0 4px 0; font-weight: 500; font-size: 12px; opacity: 0.95; }
@@ -152,26 +143,23 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 .average-stats-box { margin-top: 15px; background: #f9f9f9; border: 1px solid #eee; padding: 12px; border-radius: 10px; text-align: center; font-size: 13px; color: var(--text-main); }
 .avg-highlight { font-weight: 700; color: var(--strawberry-dark); }
 .avg-good { color: var(--matcha-dark); font-weight: 700; }
-.avg-culprit { display: block; margin-top: 4px; font-size: 11px; color: var(--text-light); }
 
+/* --- 8. SIDEBAR & HEALTH --- */
 .sidebar-section { margin-bottom: 24px; }
 .summary-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
 .sum-green { background: var(--matcha-light); color: var(--matcha-dark); }
 .sum-pink { background: var(--strawberry-light); color: var(--strawberry-dark); }
 
-/* HEALTH ITEM STYLE - FORCED PINK */
+/* --- HEALTH FIX --- */
 .summary-item.health-item { 
-    background: #f48fb1 !important; /* Forces Strawberry Pink */
-    color: white !important; 
+    background: var(--strawberry); /* Pink Background */
+    color: white; /* White Text */
     margin-top: 12px; 
     box-shadow: 0 4px 12px rgba(244, 143, 177, 0.3); 
     border: none;
 }
-.summary-item.health-item span:first-child { font-weight: 700; font-size: 14px; }
-.summary-item.health-item span:last-child { font-weight: 500; font-size: 13px; opacity: 0.95; }
-
-.summary-item span:first-child { font-weight: 500; }
-.summary-item span:last-child { font-weight: 700; font-size: 14px; }
+.summary-item.health-item span:first-child { font-weight: 700; font-size: 14px; } /* Bold "Health" */
+.summary-item.health-item span:last-child { font-weight: 500; font-size: 13px; opacity: 0.95; } /* Normal Status */
 
 .progress-group { margin-bottom: 16px; }
 .progress-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 6px; color: var(--text-light); font-weight: 600; }
@@ -181,9 +169,11 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 .remaining-card { background: var(--strawberry); color: white; padding: 18px; border-radius: 14px; text-align: center; margin-top: auto; box-shadow: 0 4px 12px rgba(244, 143, 177, 0.4); }
 .remaining-card p { margin: 0 0 6px 0; font-size: 12px; opacity: 0.9; }
 .remaining-card strong { font-size: 26px; display: block; }
+
 .btn-export { margin-top: 10px; width: 100%; background: transparent; border: 1px dashed #ccc; color: var(--text-light); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 11px; transition: all 0.2s; }
 .btn-export:hover { border-color: var(--strawberry); color: var(--strawberry); background: var(--strawberry-light); }
 
+/* --- 9. OVERLAYS & TOASTS --- */
 .overlay-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.98); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; border-radius: 16px; }
 .overlay-screen h2 { color: var(--matcha-dark); margin-bottom: 10px; }
 .overlay-screen p { color: var(--text-light); font-size: 14px; max-width: 400px; line-height: 1.5; margin-bottom: 20px; }
@@ -191,6 +181,10 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 .setup-input:focus { border-color: var(--strawberry); outline: none; }
 .remember-me { margin-top: 12px; font-size: 13px; color: var(--text-light); display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .remember-me input { width: auto; margin: 0; cursor: pointer; }
+.reset-link { margin-top: 15px; font-size: 12px; color: var(--strawberry-dark); text-decoration: underline; cursor: pointer; }
+.btn-secondary { background: transparent; border: 1px solid #ccc; color: var(--text-light); border-radius: 8px; padding: 8px; font-weight: 600; cursor: pointer; font-size: 13px; margin-top: 8px; transition: 0.2s; }
+.btn-secondary:hover { background: #eee; color: var(--text-main); }
+
 
 #toastContainer { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
 .toast { background: #333; color: white; padding: 10px 20px; border-radius: 30px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 8px; }
@@ -206,7 +200,7 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
   <div id="setupScreen" class="overlay-screen hidden">
       <h2>Welcome to Budget Buddy! 🍓</h2>
-      <p>To keep your data private and sync it, please enter a free Pantry ID.</p>
+      <p>Enter your Pantry ID to sync expenses.</p>
       
       <div style="background:#f9f9f9; padding:15px; border-radius:8px; margin-bottom:20px; text-align:left; font-size:13px;">
           1. Go to <a href="https://getpantry.cloud/" target="_blank" style="color:var(--strawberry-dark)">getpantry.cloud</a><br>
@@ -222,8 +216,21 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
           <input type="checkbox" id="rememberMeCheck" checked> 
           Keep me signed in on this device
       </label>
+      
+      <button id="cancelSetupBtn" class="btn-secondary hidden" style="width:300px" onclick="closeSetup()">Cancel</button>
   </div>
   
+  <div id="loadingOverlay" class="overlay-screen hidden">
+      <h3 style="color:var(--matcha-dark)">Syncing...</h3>
+      <div id="loadingMsg" style="font-size:12px; color:#999; margin-top:5px;">Checking Pantry ID...</div>
+      
+      <div id="emergencyReset" class="hidden" style="margin-top:20px;">
+          <button class="btn-secondary" onclick="forceReset()">Taking too long? Reset Connection</button>
+      </div>
+
+      <a class="reset-link" onclick="forceReset()">Stuck? Click here to enter ID</a>
+  </div>
+
   <div id="toastContainer"></div>
 
   <div class="container">
@@ -237,9 +244,8 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
             </div>
             
             <div class="header-controls">
-                <div id="syncStatus" title="Status" onclick="attemptSync()">
+                <div id="syncStatus" title="Status">
                     <div class="status-dot status-yellow" id="statusDot"></div>
-                    <span id="statusText" style="font-size:10px;">Checking...</span>
                 </div>
                 <button class="settings-btn" onclick="openSetup()" title="Settings">⚙️</button>
                 <select id="currencySelect" class="header-select" onchange="changeCurrency()">
@@ -434,36 +440,37 @@ const catIcons = {
     "Subscriptions": "📺", "Bills": "⚡", "Saved": "💰", "Other": "📦"
 };
 
-// -- INIT: OFFLINE FIRST --
+// -- INIT --
 initMonths();
 initApp();
 
 function initApp() {
-    // 1. Try to get ID from Code, Local, Session
+    // 1. Check Hardcoded or stored ID
     if(HARDCODED_PANTRY_ID && HARDCODED_PANTRY_ID.length > 5) {
         userPantryId = HARDCODED_PANTRY_ID;
     } else {
         userPantryId = localStorage.getItem("userPantryId") || sessionStorage.getItem("userPantryId");
     }
 
-    if(!userPantryId) {
-        document.getElementById('setupScreen').classList.remove('hidden');
+    if(userPantryId) {
+        loadData(); // Attempt Sync
     } else {
-        // User exists -> Load LOCAL data first (Instant)
-        const cached = localStorage.getItem("budgetData_cache");
-        if(cached) {
-            try {
-                const parsed = JSON.parse(cached);
-                fullData = parsed.data || {};
-                settings = parsed.settings || { currency: "kr" };
-                console.log("Loaded from cache");
-                render(); 
-            } catch(e) { console.error("Cache corrupt"); }
-        }
-        
-        // Then try to Sync with Cloud in background
-        attemptSync();
+        document.getElementById('setupScreen').classList.remove('hidden');
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('cancelSetupBtn').classList.add('hidden');
     }
+}
+
+function forceReset() {
+    localStorage.removeItem("userPantryId");
+    sessionStorage.removeItem("userPantryId");
+    // CRITICAL: Clean up potentially corrupt cache from previous JSONBin attempts
+    localStorage.removeItem("budgetData_cache");
+    
+    userPantryId = null;
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    document.getElementById('setupScreen').classList.remove('hidden');
+    document.getElementById('cancelSetupBtn').classList.add('hidden');
 }
 
 function savePantryId() {
@@ -479,29 +486,22 @@ function savePantryId() {
     else sessionStorage.setItem("userPantryId", userPantryId);
 
     document.getElementById('setupScreen').classList.add('hidden');
-    attemptSync();
+    loadData();
 }
 
 function openSetup() {
     document.getElementById('pantryIdInput').value = userPantryId || "";
     document.getElementById('setupScreen').classList.remove('hidden');
+    document.getElementById('cancelSetupBtn').classList.remove('hidden');
 }
 
-function setStatus(state, msg) {
+function closeSetup() { document.getElementById('setupScreen').classList.add('hidden'); }
+
+function setStatus(state) {
     const dot = document.getElementById('statusDot');
-    const txt = document.getElementById('statusText');
-    if(state === 'loading') { 
-        dot.className = "status-dot status-yellow"; 
-        txt.textContent = "Syncing...";
-    }
-    else if (state === 'saved') { 
-        dot.className = "status-dot status-green"; 
-        txt.textContent = "Synced";
-    }
-    else { 
-        dot.className = "status-dot status-red"; 
-        txt.textContent = "Offline";
-    }
+    if(state === 'loading') dot.className = "status-dot status-yellow";
+    else if (state === 'saved') dot.className = "status-dot status-green";
+    else dot.className = "status-dot status-red";
 }
 
 function showToast(message, type = "success") {
@@ -511,107 +511,108 @@ function showToast(message, type = "success") {
     toast.innerHTML = type === 'error' ? `⚠️ ${message}` : `✅ ${message}`;
     container.appendChild(toast);
     setTimeout(() => toast.classList.add('show'), 10);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
 }
 
-// === CORE SYNC LOGIC (PANTRY) ===
-async function attemptSync() {
-    if(!userPantryId) return;
+// === DATA LOADING (WITH SAFETY TIMEOUT) ===
+async function loadData() {
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+    document.getElementById('emergencyReset').classList.add('hidden');
     setStatus('loading');
+    
+    // Safety: If pantry hangs for >4s, offer reset
+    const safetyTimer = setTimeout(() => {
+        document.getElementById('emergencyReset').classList.remove('hidden');
+    }, 4000);
     
     try {
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
         
-        // Short timeout for sync check
         const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 6000); 
+        const id = setTimeout(() => controller.abort(), 10000); // 10s max
         
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(id);
         
         if(!res.ok) {
-            if(res.status === 404) {
-                 await createInitialBasket(); 
-                 return;
+            if(res.status === 404 || res.status === 400) {
+                 console.log("Basket not found, creating...");
+                 const initSuccess = await createInitialBasket();
+                 if(initSuccess) {
+                     clearTimeout(safetyTimer);
+                     document.getElementById('loadingOverlay').classList.add('hidden');
+                     setStatus('saved');
+                     render();
+                     return;
+                 }
             }
-            throw new Error("Server error");
+            throw new Error(`Server Error: ${res.status}`);
         }
 
         const json = await res.json();
         
-        // Merge Cloud Data if valid
-        if(json.data) {
-            fullData = json.data;
-            settings = json.settings || { currency: "kr" };
-            
-            // Update Local Cache
-            localStorage.setItem("budgetData_cache", JSON.stringify({ data: fullData, settings: settings }));
-            
-            document.getElementById('currencySelect').value = settings.currency;
-            render();
-            setStatus('saved');
-        }
+        // --- CRITICAL DATA SANITIZATION ---
+        // Ensure data is not null/undefined to prevent crash
+        fullData = json.data || {};
+        settings = json.settings || { currency: "kr" };
+        
+        clearTimeout(safetyTimer);
+        document.getElementById('currencySelect').value = settings.currency;
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        setStatus('saved');
+        render(); // This triggers the UI update
+        showToast("Data Synced");
 
     } catch(e) {
-        console.warn("Sync failed, running offline", e);
-        setStatus('error'); 
+        clearTimeout(safetyTimer);
+        console.error(e);
+        document.getElementById('loadingMsg').innerText = "Connection failed: " + e.message;
+        document.getElementById('emergencyReset').classList.remove('hidden');
+        setStatus('error');
     }
 }
 
 async function createInitialBasket() {
     try {
-        const payload = { data: fullData, settings: settings };
+        const payload = { data: {}, settings: { currency: "kr" } };
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
-        await fetch(url, {
+        const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
-        setStatus('saved');
-    } catch(e) {}
+        if(res.ok) { fullData = {}; settings = { currency: "kr" }; return true; }
+        return false;
+    } catch(e) { return false; }
 }
 
 async function saveData() {
-    // 1. Save to Local Storage immediately
-    localStorage.setItem("budgetData_cache", JSON.stringify({ data: fullData, settings: settings }));
-    setStatus('loading');
-
-    // 2. Try push to Cloud
     if(!userPantryId) return;
+    setStatus('loading');
     try {
         const payload = { data: fullData, settings: settings };
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
-        
-        // Don't wait forever on save either
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 8000);
-
         const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: controller.signal
+            body: JSON.stringify(payload)
         });
-        clearTimeout(id);
-        
-        if(res.ok) setStatus('saved');
-        else throw new Error("Cloud save failed");
+        if(!res.ok) throw new Error("Save Error");
+        setStatus('saved');
     } catch(e) {
-        setStatus('error'); // Keeps working locally
+        setStatus('error');
+        showToast("Save Failed", "error");
     }
 }
 
 function debouncedSave() {
     saveMetaLocally(); 
     clearTimeout(saveTimeout);
-    setStatus('loading'); 
+    setStatus('loading');
     saveTimeout = setTimeout(saveData, 1500);
 }
 
-// -- APP LOGIC (UNCHANGED) --
+// -- APP LOGIC --
 function formatMoney(num) {
     if(!num && num !== 0) return "0 " + settings.currency;
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + settings.currency;
@@ -626,27 +627,23 @@ function initMonths(){
     d.setMonth(d.getMonth() - i);
     const m = d.toISOString().slice(0,7);
     const opt = document.createElement('option');
-    opt.value = m;
-    opt.innerText = m;
-    sel.appendChild(opt);
+    opt.value = m; opt.innerText = m; sel.appendChild(opt);
   }
   sel.value = currentMonth;
 }
 
 function getMonth(){
+  // SAFETY CHECK: Ensure fullData exists before accessing
+  if(!fullData) fullData = {};
   if(!fullData[currentMonth]) fullData[currentMonth] = { income: 0, monthlyBudget: 0, monthlySavingsGoal: 0, longtermSavingsGoal: 0, expenses: [] };
   return fullData[currentMonth];
 }
 
-function changeMonth(){ 
-    currentMonth = document.getElementById('monthSelect').value; 
-    render(); 
-}
+function changeMonth(){ currentMonth = document.getElementById('monthSelect').value; render(); }
 
 function changeCurrency() {
     settings.currency = document.getElementById('currencySelect').value;
-    saveData();
-    render();
+    saveData(); render(); showToast("Currency Updated");
 }
 
 function saveMetaLocally(){
@@ -667,44 +664,28 @@ function addExpense(){
   if(!nameVal || !amountVal) { showToast("Enter name and amount", "error"); return; }
 
   getMonth().expenses.push({
-    id: Date.now(),
-    name: nameVal,
-    amount: +amountVal,
-    type: typeVal,
-    category: catVal,
-    date: new Date().toISOString().slice(0,10)
+    id: Date.now(), name: nameVal, amount: +amountVal, type: typeVal, category: catVal, date: new Date().toISOString().slice(0,10)
   });
 
   document.getElementById('inputName').value = "";
   document.getElementById('inputAmount').value = "";
-  
-  saveData(); 
-  render();
-  showToast("Expense Added");
+  saveData(); render(); showToast("Expense Added");
 }
 
 function importRecurring() {
-    let d = new Date(currentMonth + "-01");
-    d.setMonth(d.getMonth() - 1);
+    let d = new Date(currentMonth + "-01"); d.setMonth(d.getMonth() - 1);
     const prevMonthStr = d.toISOString().slice(0,7);
-    
     if(!fullData[prevMonthStr] || !fullData[prevMonthStr].expenses) { showToast("No data for " + prevMonthStr, "error"); return; }
-
     const fixedExpenses = fullData[prevMonthStr].expenses.filter(e => e.type === "Fixed");
     if(fixedExpenses.length === 0) { showToast("No fixed expenses in " + prevMonthStr, "error"); return; }
-
     if(confirm(`Found ${fixedExpenses.length} fixed expenses. Import?`)) {
         const m = getMonth();
         let count = 0;
         fixedExpenses.forEach((e, index) => {
-            m.expenses.push({
-                id: Date.now() + index, name: e.name, amount: e.amount, type: e.type, category: e.category, date: currentMonth + "-01" 
-            });
+            m.expenses.push({ id: Date.now() + index, name: e.name, amount: e.amount, type: e.type, category: e.category, date: currentMonth + "-01" });
             count++;
         });
-        saveData();
-        render();
-        showToast(`Imported ${count} expenses`);
+        saveData(); render(); showToast(`Imported ${count} expenses`);
     }
 }
 
@@ -728,22 +709,12 @@ function deleteExpense(id){
     const realIndex = m.expenses.findIndex(e => e.id === id);
     if(realIndex !== -1 && confirm("Delete this expense?")){
         m.expenses.splice(realIndex, 1);
-        saveData();
-        render(); 
-        showToast("Expense Deleted");
+        saveData(); render(); showToast("Expense Deleted");
     }
 }
 
-let sortCol = null;
-let sortAsc = true;
-let currentDisplayedExpenses = [];
-
-function sortExpenses(col) {
-    if(sortCol === col) sortAsc = !sortAsc;
-    else { sortCol = col; sortAsc = true; }
-    render();
-}
-
+let sortCol = null; let sortAsc = true; let currentDisplayedExpenses = [];
+function sortExpenses(col) { if(sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = true; } render(); }
 function filterExpenses() { render(); }
 
 let pieChartInstance, lineChartInstance;
@@ -751,7 +722,6 @@ let pieChartInstance, lineChartInstance;
 function render(){
   const m = getMonth();
   
-  // Fill inputs only if they are not focused (to prevent overwriting user typing)
   if(document.activeElement.id !== 'income') document.getElementById('income').value = m.income || "";
   if(document.activeElement.id !== 'monthlyBudget') document.getElementById('monthlyBudget').value = m.monthlyBudget || "";
   if(document.activeElement.id !== 'monthlySavingsGoal') document.getElementById('monthlySavingsGoal').value = m.monthlySavingsGoal || "";
@@ -876,4 +846,32 @@ function drawCharts(m){
           labels: labels,
           datasets: [
             { label: "Spending", data: dailyExpenses, borderColor: "#f48fb1", backgroundColor: "rgba(244, 143, 177, 0.1)", borderWidth: 2, pointRadius: 1, tension: 0.1, fill: true },
-            { label: "Budget Limit", data: labels.map(() => m.monthlyBudget), borderColor: "#f48fb1",
+            { label: "Budget Limit", data: labels.map(() => m.monthlyBudget), borderColor: "#f48fb1", borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false },
+            { label: "Savings", data: dailySavings, borderColor: "#669e7c", backgroundColor: "rgba(102, 158, 124, 0.1)", borderWidth: 2, pointRadius: 1, tension: 0.1, fill: true },
+            { label: "Savings Goal", data: labels.map(() => m.monthlySavingsGoal), borderColor: "#669e7c", borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false }
+          ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: {size: 10} } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } }, plugins: { legend: { display: false } } }
+  });
+}
+
+function showTab(id){
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+  const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
+  if(btn) btn.classList.add("active");
+  document.querySelectorAll('.tab-content').forEach(d => d.classList.add('hidden'));
+  document.getElementById(id).classList.remove("hidden");
+  if(id === 'charts') render();
+}
+
+function exportCSV() {
+    const m = getMonth();
+    let csv = "Date,Name,Amount,Type,Category\n";
+    m.expenses.forEach(e => { csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`; });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `budget_${currentMonth}.csv`; a.click();
+}
+</script>
+</body>
+</html>
