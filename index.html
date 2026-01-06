@@ -57,7 +57,7 @@ body {
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   border: 1px solid rgba(0,0,0,0.04);
-  height: 600px; /* Increased height slightly */
+  height: 620px; /* Increased height slightly for new features */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -260,8 +260,9 @@ input:focus, select:focus {
     cursor: pointer;
     font-size: 13px;
     margin-top: 8px;
+    transition: 0.2s;
 }
-.btn-secondary:hover { background: #eee; }
+.btn-secondary:hover { background: #eee; color: var(--text-main); }
 
 .btn-delete {
     background: transparent;
@@ -317,6 +318,20 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 }
 .chart-wrapper-pie { width: 35%; height: 100%; position: relative; }
 .chart-wrapper-line { width: 65%; height: 100%; position: relative; }
+
+/* Average Spending Box */
+.average-stats-box {
+    margin-top: 15px;
+    background: #f9f9f9;
+    border: 1px solid #eee;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-main);
+}
+.avg-highlight { font-weight: 700; color: var(--strawberry-dark); }
+.avg-good { color: var(--matcha-dark); font-weight: 700; }
 
 .sidebar-section { margin-bottom: 24px; }
 .summary-item {
@@ -388,8 +403,15 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 }
 .remember-me input { width: auto; margin: 0; cursor: pointer; }
 
-/* CATEGORY ICON STYLE */
-.cat-icon { font-size: 16px; margin-right: 6px; }
+/* Import Button */
+.import-btn-container {
+    display: flex; justify-content: flex-end; margin-bottom: 8px;
+}
+.btn-import {
+    background: transparent; border: 1px solid var(--matcha); color: var(--matcha-dark);
+    font-size: 11px; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-weight: 600;
+}
+.btn-import:hover { background: var(--matcha-light); }
 
 </style>
 </head>
@@ -474,6 +496,10 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
             </div>
 
             <div class="add-expense-box">
+                <div class="import-btn-container">
+                    <button class="btn-import" onclick="importRecurring()">🔄 Import Fixed from Last Month</button>
+                </div>
+
                 <h3 style="margin-top:0; color: var(--text-main); margin-bottom: 12px; font-size: 14px;">Add New Expense</h3>
                 <div class="grid-4">
                     <div>
@@ -554,6 +580,9 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
                     <canvas id="lineChart"></canvas>
                 </div>
             </div>
+
+            <div id="averageStats" class="average-stats-box hidden">
+                </div>
         </div>
 
     </div>
@@ -611,7 +640,6 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 // ==========================================
 // CONFIG: HARDCODE ID FOR AUTO-LOGIN
 // ==========================================
-// Example: const HARDCODED_PANTRY_ID = "d345f...";
 const HARDCODED_PANTRY_ID = ""; 
 // ==========================================
 
@@ -623,7 +651,6 @@ let settings = { currency: "kr" };
 let currentMonth = new Date().toISOString().slice(0,7);
 let saveTimeout;
 
-// Icon Map
 const catIcons = {
     "Rent": "🏠", "Food": "🍔", "Fun": "🎉", "Travel": "✈️",
     "Subscriptions": "📺", "Bills": "⚡", "Saved": "💰", "Other": "📦"
@@ -852,6 +879,50 @@ function addExpense(){
   render();
 }
 
+// === NEW FEATURE: Import Recurring ===
+function importRecurring() {
+    // 1. Calculate previous month string
+    let d = new Date(currentMonth + "-01");
+    d.setMonth(d.getMonth() - 1);
+    const prevMonthStr = d.toISOString().slice(0,7);
+    
+    // 2. Check if data exists
+    if(!fullData[prevMonthStr] || !fullData[prevMonthStr].expenses) {
+        alert("No data found for " + prevMonthStr);
+        return;
+    }
+
+    // 3. Filter "Fixed" expenses
+    const fixedExpenses = fullData[prevMonthStr].expenses.filter(e => e.type === "Fixed");
+    
+    if(fixedExpenses.length === 0) {
+        alert("No fixed expenses found in " + prevMonthStr);
+        return;
+    }
+
+    if(confirm(`Found ${fixedExpenses.length} fixed expenses in ${prevMonthStr}. Import them to this month?`)) {
+        const m = getMonth();
+        let count = 0;
+        
+        fixedExpenses.forEach((e, index) => {
+            // Create copy
+            m.expenses.push({
+                id: Date.now() + index, // Ensure unique ID
+                name: e.name,
+                amount: e.amount,
+                type: e.type,
+                category: e.category,
+                date: currentMonth + "-01" // Set to 1st of current month
+            });
+            count++;
+        });
+
+        saveData();
+        render();
+        alert(`Successfully imported ${count} expenses.`);
+    }
+}
+
 window.updateExpense = function(index, field, element) {
     const m = getMonth();
     let val = element.value;
@@ -904,7 +975,7 @@ function render(){
   document.getElementById('saveBar').style.width = goalPct + "%";
   document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
 
-  // Table with Icons
+  // Table
   const tbody = document.getElementById('expenseTable');
   tbody.innerHTML = m.expenses.map((e, i) => `
     <tr>
@@ -933,14 +1004,62 @@ function render(){
     </tr>
   `).join("");
 
+  // RENDER AVERAGE STATS
+  renderAverageStats(totalExp);
+
   drawCharts(m);
 }
 
+// === NEW FEATURE: Calculate and Show Average ===
+function renderAverageStats(currentSpending) {
+    const box = document.getElementById('averageStats');
+    
+    // Get all previous months
+    const months = Object.keys(fullData).filter(m => m !== currentMonth && m < currentMonth);
+    
+    if(months.length === 0) {
+        box.classList.add('hidden');
+        return;
+    }
+
+    let sum = 0;
+    let count = 0;
+    
+    months.forEach(mKey => {
+        const monthData = fullData[mKey];
+        if(monthData && monthData.expenses) {
+            const exp = monthData.expenses.filter(e => e.category !== "Saved").reduce((a,b) => a + b.amount, 0);
+            if(exp > 0) {
+                sum += exp;
+                count++;
+            }
+        }
+    });
+
+    if(count === 0) {
+        box.classList.add('hidden');
+        return;
+    }
+
+    const avg = sum / count;
+    const diff = currentSpending - avg;
+    
+    box.classList.remove('hidden');
+    
+    let msg = `Your average spending is <strong>${formatMoney(avg.toFixed(0))}</strong>. <br>`;
+    
+    if(diff > 0) {
+        msg += `<span class="avg-highlight">▲ You are spending ${formatMoney(diff.toFixed(0))} more than usual.</span>`;
+    } else {
+        msg += `<span class="avg-good">▼ You are spending ${formatMoney(Math.abs(diff).toFixed(0))} less than usual.</span>`;
+    }
+    
+    box.innerHTML = msg;
+}
+
 function drawCharts(m){
-  // 1. PIE CHART - Use Icons in Label
   const cats = {};
   m.expenses.filter(e => e.category !== "Saved").forEach(e => {
-      // Add icon to key
       const label = (catIcons[e.category] || "") + " " + e.category;
       cats[label] = (cats[label] || 0) + e.amount;
   });
@@ -968,7 +1087,6 @@ function drawCharts(m){
       }
   });
 
-  // 2. LINE CHART
   const lineCtx = document.getElementById('lineChart').getContext('2d');
   if(lineChartInstance) lineChartInstance.destroy();
 
