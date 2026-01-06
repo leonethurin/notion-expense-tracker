@@ -117,6 +117,7 @@ body {
     align-items: center;
     gap: 6px;
     margin-right: 6px;
+    cursor: pointer;
 }
 .status-dot {
     width: 8px;
@@ -124,7 +125,7 @@ body {
     border-radius: 50%;
     background: #ccc;
 }
-.status-green { background: var(--matcha-dark); }
+.status-green { background: var(--matcha-dark); box-shadow: 0 0 5px var(--matcha); }
 .status-yellow { background: #fbc02d; }
 .status-red { background: var(--strawberry-dark); }
 
@@ -369,20 +370,15 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
     margin-bottom: 8px; padding: 8px 12px; border-radius: 10px; font-size: 13px;
 }
 
-/* === MODIFIERAD HEALTH-STYLE === */
-/* Den matchar nu Expenses-raden i färg (ljusrosa) */
+/* === MODIFIERAD HEALTH-STYLE (MATCHING EXPENSES) === */
 .summary-item.health-item {
     background: var(--strawberry-light);
     color: var(--strawberry-dark);
     margin-top: 8px;
 }
-
-/* "Health" (vänster sida) -> Fetstil */
 .summary-item.health-item span:first-child {
     font-weight: 700;
 }
-
-/* "On Track" (höger sida) -> Normal stil (inte fet) */
 .summary-item.health-item span:last-child {
     font-weight: 500;
 }
@@ -496,7 +492,7 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
   <div id="setupScreen" class="overlay-screen hidden">
       <h2>Welcome to Budget Buddy! 🍓</h2>
-      <p>To keep your data private and sync it, please enter a free Pantry ID.</p>
+      <p>Enter your Pantry ID to sync expenses.</p>
       
       <div style="background:#f9f9f9; padding:15px; border-radius:8px; margin-bottom:20px; text-align:left; font-size:13px;">
           1. Go to <a href="https://getpantry.cloud/" target="_blank" style="color:var(--strawberry-dark)">getpantry.cloud</a><br>
@@ -515,17 +511,6 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
       <button id="cancelSetupBtn" class="btn-secondary hidden" style="width:300px" onclick="closeSetup()">Cancel</button>
   </div>
-
-  <div id="loadingOverlay" class="overlay-screen hidden">
-      <h3 style="color:var(--matcha-dark)">Syncing...</h3>
-      <div id="loadingMsg" style="font-size:12px; color:#999; margin-top:5px;">Checking Pantry ID...</div>
-      
-      <div id="emergencyReset" class="hidden" style="margin-top:20px;">
-          <button class="btn-secondary" onclick="forceReset()">Taking too long? Reset Connection</button>
-      </div>
-
-      <a class="reset-link" onclick="forceReset()">Stuck? Click here to enter ID</a>
-  </div>
   
   <div id="toastContainer"></div>
 
@@ -540,8 +525,9 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
             </div>
             
             <div class="header-controls">
-                <div id="syncStatus" title="Status">
+                <div id="syncStatus" title="Status" onclick="attemptSync()">
                     <div class="status-dot status-yellow" id="statusDot"></div>
+                    <span id="statusText" style="font-size:10px;">Checking...</span>
                 </div>
                 <button class="settings-btn" onclick="openSetup()" title="Settings">⚙️</button>
                 <select id="currencySelect" class="header-select" onchange="changeCurrency()">
@@ -745,40 +731,36 @@ const catIcons = {
     "Subscriptions": "📺", "Bills": "⚡", "Saved": "💰", "Other": "📦"
 };
 
-// -- INIT --
+// -- INIT: OFFLINE FIRST --
 initMonths();
 initApp();
 
 function initApp() {
+    // 1. Try to get ID from Code, Local, Session
     if(HARDCODED_PANTRY_ID && HARDCODED_PANTRY_ID.length > 5) {
         userPantryId = HARDCODED_PANTRY_ID;
-        loadData();
-        return;
+    } else {
+        userPantryId = localStorage.getItem("userPantryId") || sessionStorage.getItem("userPantryId");
     }
-    const stored = localStorage.getItem("userPantryId");
-    if(stored) {
-        userPantryId = stored;
-        loadData();
-        return;
-    }
-    const session = sessionStorage.getItem("userPantryId");
-    if(session) {
-        userPantryId = session;
-        loadData();
-        return;
-    }
-    document.getElementById('setupScreen').classList.remove('hidden');
-    document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('cancelSetupBtn').classList.add('hidden');
-}
 
-function forceReset() {
-    localStorage.removeItem("userPantryId");
-    sessionStorage.removeItem("userPantryId");
-    userPantryId = null;
-    document.getElementById('loadingOverlay').classList.add('hidden');
-    document.getElementById('setupScreen').classList.remove('hidden');
-    document.getElementById('cancelSetupBtn').classList.add('hidden');
+    if(!userPantryId) {
+        document.getElementById('setupScreen').classList.remove('hidden');
+    } else {
+        // User exists -> Load LOCAL data first (Instant)
+        const cached = localStorage.getItem("budgetData_cache");
+        if(cached) {
+            try {
+                const parsed = JSON.parse(cached);
+                fullData = parsed.data || {};
+                settings = parsed.settings || { currency: "kr" };
+                console.log("Loaded from cache");
+                render(); 
+            } catch(e) { console.error("Cache corrupt"); }
+        }
+        
+        // Then try to Sync with Cloud in background
+        attemptSync();
+    }
 }
 
 function savePantryId() {
@@ -794,7 +776,7 @@ function savePantryId() {
     else sessionStorage.setItem("userPantryId", userPantryId);
 
     document.getElementById('setupScreen').classList.add('hidden');
-    loadData();
+    attemptSync();
 }
 
 function openSetup() {
@@ -809,19 +791,27 @@ function closeSetup() {
 
 function setStatus(state) {
     const dot = document.getElementById('statusDot');
-    if(state === 'loading') dot.className = "status-dot status-yellow";
-    else if (state === 'saved') dot.className = "status-dot status-green";
-    else dot.className = "status-dot status-red";
+    const txt = document.getElementById('statusText');
+    if(state === 'loading') { 
+        dot.className = "status-dot status-yellow"; 
+        txt.textContent = "Syncing...";
+    }
+    else if (state === 'saved') { 
+        dot.className = "status-dot status-green"; 
+        txt.textContent = "Synced";
+    }
+    else { 
+        dot.className = "status-dot status-red"; 
+        txt.textContent = "Offline";
+    }
 }
 
-// === TOAST NOTIFICATIONS SYSTEM ===
 function showToast(message, type = "success") {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
     toast.className = `toast ${type === 'error' ? 'toast-error' : 'toast-success'}`;
     toast.innerHTML = type === 'error' ? `⚠️ ${message}` : `✅ ${message}`;
     container.appendChild(toast);
-
     setTimeout(() => toast.classList.add('show'), 10);
     setTimeout(() => {
         toast.classList.remove('show');
@@ -829,109 +819,101 @@ function showToast(message, type = "success") {
     }, 3000);
 }
 
-// === ROBUST DATA LOADING ===
-async function loadData() {
-    document.getElementById('loadingOverlay').classList.remove('hidden');
-    document.getElementById('emergencyReset').classList.add('hidden');
+// === CORE SYNC LOGIC (PANTRY) ===
+async function attemptSync() {
+    if(!userPantryId) return;
     setStatus('loading');
-    
-    // Safety timeout: If loading takes > 3s, show reset button
-    const safetyTimer = setTimeout(() => {
-        document.getElementById('emergencyReset').classList.remove('hidden');
-    }, 3000);
     
     try {
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
         
-        // Add timeout to fetch
+        // Short timeout for sync check
         const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 8000); // 8 sec timeout
+        const id = setTimeout(() => controller.abort(), 6000); 
         
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(id);
         
         if(!res.ok) {
-            // If basket missing, create it. If 401/403/500, throw error.
-            if(res.status === 404 || res.status === 400) {
-                 console.log("Basket not found, creating...");
-                 const initSuccess = await createInitialBasket();
-                 if(initSuccess) {
-                     clearTimeout(safetyTimer);
-                     document.getElementById('loadingOverlay').classList.add('hidden');
-                     setStatus('saved');
-                     render();
-                     return;
-                 }
+            if(res.status === 404) {
+                 await createInitialBasket(); 
+                 return;
             }
-            throw new Error(`Server Error: ${res.status}`);
+            throw new Error("Server error");
         }
 
         const json = await res.json();
-        fullData = json.data || {};
-        settings = json.settings || { currency: "kr" };
         
-        clearTimeout(safetyTimer);
-        document.getElementById('currencySelect').value = settings.currency;
-        document.getElementById('loadingOverlay').classList.add('hidden');
-        setStatus('saved');
-        render();
-        showToast("Data Synced");
+        // Merge Cloud Data if valid
+        if(json.data) {
+            fullData = json.data;
+            settings = json.settings || { currency: "kr" };
+            
+            // Update Local Cache
+            localStorage.setItem("budgetData_cache", JSON.stringify({ data: fullData, settings: settings }));
+            
+            document.getElementById('currencySelect').value = settings.currency;
+            render();
+            setStatus('saved');
+        }
 
     } catch(e) {
-        clearTimeout(safetyTimer);
-        console.error(e);
-        document.getElementById('loadingMsg').innerText = "Connection failed: " + e.message;
-        // Show reset button immediately on error
-        document.getElementById('emergencyReset').classList.remove('hidden');
-        setStatus('error');
+        console.warn("Sync failed, running offline", e);
+        setStatus('error'); 
     }
 }
 
 async function createInitialBasket() {
     try {
-        const payload = { data: {}, settings: { currency: "kr" } };
+        const payload = { data: fullData, settings: settings };
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
-        const res = await fetch(url, {
+        await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
-        if(res.ok) {
-            fullData = {};
-            settings = { currency: "kr" };
-            return true;
-        }
-        return false;
-    } catch(e) { return false; }
+        setStatus('saved');
+    } catch(e) {}
 }
 
 async function saveData() {
-    if(!userPantryId) return;
+    // 1. Save to Local Storage immediately
+    localStorage.setItem("budgetData_cache", JSON.stringify({ data: fullData, settings: settings }));
     setStatus('loading');
+
+    // 2. Try push to Cloud
+    if(!userPantryId) return;
     try {
         const payload = { data: fullData, settings: settings };
         const url = `https://getpantry.cloud/apiv1/pantry/${userPantryId}/basket/${BASKET_NAME}`;
+        
+        // Don't wait forever on save either
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), 8000);
+
         const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: controller.signal
         });
-        if(!res.ok) throw new Error("Save Error");
-        setStatus('saved');
+        clearTimeout(id);
+        
+        if(res.ok) setStatus('saved');
+        else throw new Error("Cloud save failed");
     } catch(e) {
-        setStatus('error');
-        showToast("Save Failed", "error");
+        setStatus('error'); // Keeps working locally
     }
 }
 
 function debouncedSave() {
     saveMetaLocally(); 
     clearTimeout(saveTimeout);
-    setStatus('loading');
+    setStatus('loading'); 
     saveTimeout = setTimeout(saveData, 1500);
 }
 
-// -- APP LOGIC --
+// -- APP LOGIC (UNCHANGED) --
 function formatMoney(num) {
     if(!num && num !== 0) return "0 " + settings.currency;
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " " + settings.currency;
@@ -1007,7 +989,6 @@ function addExpense(){
   showToast("Expense Added");
 }
 
-// === FEATURE: Import Recurring ===
 function importRecurring() {
     let d = new Date(currentMonth + "-01");
     d.setMonth(d.getMonth() - 1);
@@ -1025,17 +1006,12 @@ function importRecurring() {
         return;
     }
 
-    if(confirm(`Found ${fixedExpenses.length} fixed expenses in ${prevMonthStr}. Import?`)) {
+    if(confirm(`Found ${fixedExpenses.length} fixed expenses. Import?`)) {
         const m = getMonth();
         let count = 0;
         fixedExpenses.forEach((e, index) => {
             m.expenses.push({
-                id: Date.now() + index, 
-                name: e.name,
-                amount: e.amount,
-                type: e.type,
-                category: e.category,
-                date: currentMonth + "-01" 
+                id: Date.now() + index, name: e.name, amount: e.amount, type: e.type, category: e.category, date: currentMonth + "-01" 
             });
             count++;
         });
@@ -1049,13 +1025,9 @@ window.updateExpense = function(index, field, element) {
     const m = getMonth();
     let val = element.value;
     if(field === 'amount') val = Number(val);
-    
-    // Find real item based on what's displayed (handles sort/filter)
     const displayedItem = currentDisplayedExpenses[index];
     if(!displayedItem) return;
-    
     const realIndex = m.expenses.findIndex(e => e.id === displayedItem.id);
-    
     if(realIndex !== -1) {
         m.expenses[realIndex][field] = val;
         clearTimeout(saveTimeout);
@@ -1075,7 +1047,6 @@ function deleteExpense(id){
     }
 }
 
-// === SORT & FILTER STATE ===
 let sortCol = null;
 let sortAsc = true;
 let currentDisplayedExpenses = [];
@@ -1086,9 +1057,7 @@ function sortExpenses(col) {
     render();
 }
 
-function filterExpenses() {
-    render();
-}
+function filterExpenses() { render(); }
 
 let pieChartInstance, lineChartInstance;
 
@@ -1106,19 +1075,15 @@ function render(){
 
   document.getElementById('kIncome').textContent = formatMoney(m.income);
   document.getElementById('sIncome').textContent = formatMoney(m.income);
-  
   document.getElementById('kExpenses').textContent = formatMoney(totalExp);
   document.getElementById('sExpenses').textContent = formatMoney(totalExp);
-
   document.getElementById('kSaved').textContent = formatMoney(totalSaved);
   document.getElementById('sSaved').textContent = formatMoney(totalSaved);
-
   document.getElementById('remaining').textContent = formatMoney(remainingVal.toFixed(2));
 
-  // --- CLEAN HEALTH SCORE (Single Line) ---
+  // --- HEALTH SCORE ---
   const healthEl = document.getElementById('healthScore');
   const budgetRatio = m.monthlyBudget > 0 ? (totalExp / m.monthlyBudget) : 0;
-  
   if(!m.income) healthEl.innerText = "Add Income 🟡";
   else if(remainingVal < 0) healthEl.innerText = "Over Budget 🔴";
   else if(budgetRatio > 0.9) healthEl.innerText = "Near Limit 🟡";
@@ -1127,60 +1092,29 @@ function render(){
   const incomePct = m.income ? Math.min((totalExp / m.income) * 100, 100) : 0;
   document.getElementById('incomeBar').style.width = incomePct + "%";
   document.getElementById('incomeUsageText').textContent = incomePct.toFixed(0) + "% used";
-
   const goalPct = m.longtermSavingsGoal ? Math.min((totalSaved / m.longtermSavingsGoal) * 100, 100) : 0;
   document.getElementById('saveBar').style.width = goalPct + "%";
   document.getElementById('goalText').textContent = goalPct.toFixed(0) + "% reached";
 
-  // --- TABLE RENDER (With Search & Sort) ---
   const searchVal = document.getElementById('searchInput').value.toLowerCase();
-  
-  let list = m.expenses.filter(e => 
-      e.name.toLowerCase().includes(searchVal) || 
-      e.category.toLowerCase().includes(searchVal)
-  );
-  
+  let list = m.expenses.filter(e => e.name.toLowerCase().includes(searchVal) || e.category.toLowerCase().includes(searchVal));
   if(sortCol) {
       list.sort((a,b) => {
-          let va = a[sortCol];
-          let vb = b[sortCol];
-          if(typeof va === 'string') va = va.toLowerCase();
-          if(typeof vb === 'string') vb = vb.toLowerCase();
-          if(va < vb) return sortAsc ? -1 : 1;
-          if(va > vb) return sortAsc ? 1 : -1;
-          return 0;
+          let va = a[sortCol]; let vb = b[sortCol];
+          if(typeof va === 'string') va = va.toLowerCase(); if(typeof vb === 'string') vb = vb.toLowerCase();
+          if(va < vb) return sortAsc ? -1 : 1; if(va > vb) return sortAsc ? 1 : -1; return 0;
       });
   }
-  
   currentDisplayedExpenses = list;
-
-  const tbody = document.getElementById('expenseTable');
-  tbody.innerHTML = list.map((e, i) => `
+  document.getElementById('expenseTable').innerHTML = list.map((e, i) => `
     <tr>
       <td><input type="date" value="${e.date}" onchange="updateExpense(${i}, 'date', this)"></td>
       <td><input type="text" value="${e.name}" onchange="updateExpense(${i}, 'name', this)"></td>
       <td><input type="number" value="${e.amount}" onchange="updateExpense(${i}, 'amount', this)"></td>
-      <td>
-        <select onchange="updateExpense(${i}, 'type', this)">
-            <option ${e.type=="Fixed"?"selected":""}>Fixed</option>
-            <option ${e.type=="Variable"?"selected":""}>Variable</option>
-        </select>
-      </td>
-      <td>
-        <select onchange="updateExpense(${i}, 'category', this)">
-            <option value="Rent" ${e.category=="Rent"?"selected":""}>🏠 Rent</option>
-            <option value="Food" ${e.category=="Food"?"selected":""}>🍔 Food</option>
-            <option value="Fun" ${e.category=="Fun"?"selected":""}>🎉 Fun</option>
-            <option value="Travel" ${e.category=="Travel"?"selected":""}>✈️ Travel</option>
-            <option value="Subscriptions" ${e.category=="Subscriptions"?"selected":""}>📺 Subs</option>
-            <option value="Bills" ${e.category=="Bills"?"selected":""}>⚡ Bills</option>
-            <option value="Saved" ${e.category=="Saved"?"selected":""}>💰 Saved</option>
-            <option value="Other" ${e.category=="Other"?"selected":""}>📦 Other</option>
-        </select>
-      </td>
+      <td><select onchange="updateExpense(${i}, 'type', this)"><option ${e.type=="Fixed"?"selected":""}>Fixed</option><option ${e.type=="Variable"?"selected":""}>Variable</option></select></td>
+      <td><select onchange="updateExpense(${i}, 'category', this)"><option value="Rent" ${e.category=="Rent"?"selected":""}>🏠 Rent</option><option value="Food" ${e.category=="Food"?"selected":""}>🍔 Food</option><option value="Fun" ${e.category=="Fun"?"selected":""}>🎉 Fun</option><option value="Travel" ${e.category=="Travel"?"selected":""}>✈️ Travel</option><option value="Subscriptions" ${e.category=="Subscriptions"?"selected":""}>📺 Subs</option><option value="Bills" ${e.category=="Bills"?"selected":""}>⚡ Bills</option><option value="Saved" ${e.category=="Saved"?"selected":""}>💰 Saved</option><option value="Other" ${e.category=="Other"?"selected":""}>📦 Other</option></select></td>
       <td><button class="btn-delete" onclick="deleteExpense(${e.id})">✕</button></td>
-    </tr>
-  `).join("");
+    </tr>`).join("");
 
   renderAverageStats(m, totalExp);
   drawCharts(m);
@@ -1189,13 +1123,8 @@ function render(){
 function renderAverageStats(currentMonthData, currentSpending) {
     const box = document.getElementById('averageStats');
     const months = Object.keys(fullData).filter(m => m !== currentMonth && m < currentMonth);
-    
     if(months.length === 0) { box.classList.add('hidden'); return; }
-
-    let totalSum = 0;
-    let catSums = {};
-    let monthCount = months.length;
-
+    let totalSum = 0; let catSums = {}; let monthCount = months.length;
     months.forEach(mKey => {
         const monthData = fullData[mKey];
         if(monthData && monthData.expenses) {
@@ -1204,169 +1133,67 @@ function renderAverageStats(currentMonthData, currentSpending) {
              mExp.forEach(e => { catSums[e.category] = (catSums[e.category] || 0) + e.amount; });
         }
     });
-
-    const avgTotal = totalSum / monthCount;
-    const totalDiff = currentSpending - avgTotal;
-
+    const avgTotal = totalSum / monthCount; const totalDiff = currentSpending - avgTotal;
     box.classList.remove('hidden');
     let msg = `Average: <strong>${formatMoney(avgTotal.toFixed(0))}</strong>. `;
-    
     if(totalDiff > 0) {
         msg += `<span class="avg-highlight">▲ +${formatMoney(totalDiff.toFixed(0))} vs avg.</span>`;
-        let maxDiff = 0;
-        let culprit = "";
-        let currentCatTotals = {};
-        currentMonthData.expenses.filter(e => e.category !== "Saved").forEach(e => {
-            currentCatTotals[e.category] = (currentCatTotals[e.category] || 0) + e.amount;
-        });
+        let maxDiff = 0; let culprit = ""; let currentCatTotals = {};
+        currentMonthData.expenses.filter(e => e.category !== "Saved").forEach(e => { currentCatTotals[e.category] = (currentCatTotals[e.category] || 0) + e.amount; });
         for (let cat in currentCatTotals) {
-             let catAvg = (catSums[cat] || 0) / monthCount;
-             let diff = currentCatTotals[cat] - catAvg;
+             let catAvg = (catSums[cat] || 0) / monthCount; let diff = currentCatTotals[cat] - catAvg;
              if(diff > maxDiff) { maxDiff = diff; culprit = cat; }
         }
-        if(culprit && maxDiff > 100) {
-            const icon = catIcons[culprit] || "";
-            msg += `<span class="avg-culprit">Mainly due to: ${icon} ${culprit} (+${formatMoney(maxDiff.toFixed(0))})</span>`;
-        }
-    } else {
-        msg += `<span class="avg-good">▼ -${formatMoney(Math.abs(totalDiff).toFixed(0))} vs avg.</span>`;
-    }
+        if(culprit && maxDiff > 100) { msg += `<span class="avg-culprit">Mainly due to: ${catIcons[culprit]||""} ${culprit} (+${formatMoney(maxDiff.toFixed(0))})</span>`; }
+    } else { msg += `<span class="avg-good">▼ -${formatMoney(Math.abs(totalDiff).toFixed(0))} vs avg.</span>`; }
     box.innerHTML = msg;
 }
 
 function drawCharts(m){
   const cats = {};
-  m.expenses.filter(e => e.category !== "Saved").forEach(e => {
-      // Clean key for matching
-      cats[e.category] = (cats[e.category] || 0) + e.amount;
-  });
-
+  m.expenses.filter(e => e.category !== "Saved").forEach(e => { cats[e.category] = (cats[e.category] || 0) + e.amount; });
   const pieCtx = document.getElementById('pieChart').getContext('2d');
   if(pieChartInstance) pieChartInstance.destroy();
-  
   const colors = ["#f48fb1", "#8fc7a4", "#a5d6a7", "#f06292", "#c8e6c9", "#f8bbd0", "#ffecb3", "#b39ddb"];
-
-  // Prepare Labels with Icons
   const labelsWithIcons = Object.keys(cats).map(k => (catIcons[k] || "") + " " + k);
-
   pieChartInstance = new Chart(pieCtx, {
       type: "doughnut",
-      data: {
-          labels: labelsWithIcons, // Display Labels
-          datasets: [{
-              data: Object.values(cats),
-              backgroundColor: colors,
-              borderWidth: 0,
-              hoverOffset: 4
-          }]
-      },
+      data: { labels: labelsWithIcons, datasets: [{ data: Object.values(cats), backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] },
       options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position: 'left', labels: { boxWidth: 10, font: {size: 10} } } },
-          // === NEW: CLICK INTERACTION ===
           onClick: (evt, elements) => {
               if(elements.length > 0) {
-                  const idx = elements[0].index;
-                  const label = labelsWithIcons[idx]; // e.g. "🍔 Food"
-                  // Extract just the word part (Food)
-                  const categoryName = Object.keys(cats)[idx]; 
-                  
-                  // 1. Switch Tab
-                  showTab('expenses');
-                  // 2. Set Search
-                  const searchBox = document.getElementById('searchInput');
-                  searchBox.value = categoryName;
-                  // 3. Trigger Filter
-                  filterExpenses();
-                  showToast(`Showing ${categoryName} expenses`);
+                  const idx = elements[0].index; const categoryName = Object.keys(cats)[idx]; 
+                  showTab('expenses'); document.getElementById('searchInput').value = categoryName; filterExpenses(); showToast(`Showing ${categoryName} expenses`);
               }
           }
       }
   });
-
   const lineCtx = document.getElementById('lineChart').getContext('2d');
   if(lineChartInstance) lineChartInstance.destroy();
-
-  const year = parseInt(currentMonth.split('-')[0]);
-  const month = parseInt(currentMonth.split('-')[1]);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  
+  const year = parseInt(currentMonth.split('-')[0]); const month = parseInt(currentMonth.split('-')[1]); const daysInMonth = new Date(year, month, 0).getDate();
   const labels = Array.from({length: daysInMonth}, (_, i) => "Day " + (i + 1));
-  const dailyExpenses = new Array(daysInMonth).fill(0);
-  const dailySavings = new Array(daysInMonth).fill(0);
-
+  const dailyExpenses = new Array(daysInMonth).fill(0); const dailySavings = new Array(daysInMonth).fill(0);
   const sortedExp = [...m.expenses].sort((a,b) => new Date(a.date) - new Date(b.date));
-
-  let cumExp = 0;
-  let cumSave = 0;
-
+  let cumExp = 0; let cumSave = 0;
   for (let day = 1; day <= daysInMonth; day++) {
       const dayStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
-      const todaysItems = sortedExp.filter(e => e.date === dayStr);
-      todaysItems.forEach(e => {
-          if(e.category === "Saved") cumSave += e.amount;
-          else cumExp += e.amount;
-      });
-      dailyExpenses[day - 1] = cumExp;
-      dailySavings[day - 1] = cumSave;
+      sortedExp.filter(e => e.date === dayStr).forEach(e => { if(e.category === "Saved") cumSave += e.amount; else cumExp += e.amount; });
+      dailyExpenses[day - 1] = cumExp; dailySavings[day - 1] = cumSave;
   }
-
   lineChartInstance = new Chart(lineCtx, {
       type: "line",
       data: {
           labels: labels,
           datasets: [
-            {
-              label: "Spending",
-              data: dailyExpenses,
-              borderColor: "#f48fb1", 
-              backgroundColor: "rgba(244, 143, 177, 0.1)",
-              borderWidth: 2,
-              pointRadius: 1, 
-              tension: 0.1,
-              fill: true
-            },
-            {
-              label: "Budget Limit",
-              data: labels.map(() => m.monthlyBudget), 
-              borderColor: "#f48fb1",
-              borderDash: [5, 5],
-              borderWidth: 1.5,
-              pointRadius: 0,
-              fill: false
-            },
-            {
-              label: "Savings",
-              data: dailySavings,
-              borderColor: "#669e7c",
-              backgroundColor: "rgba(102, 158, 124, 0.1)",
-              borderWidth: 2,
-              pointRadius: 1,
-              tension: 0.1,
-              fill: true
-            },
-            {
-              label: "Savings Goal",
-              data: labels.map(() => m.monthlySavingsGoal), 
-              borderColor: "#669e7c", 
-              borderDash: [5, 5],
-              borderWidth: 1.5,
-              pointRadius: 0,
-              fill: false
-            }
+            { label: "Spending", data: dailyExpenses, borderColor: "#f48fb1", backgroundColor: "rgba(244, 143, 177, 0.1)", borderWidth: 2, pointRadius: 1, tension: 0.1, fill: true },
+            { label: "Budget Limit", data: labels.map(() => m.monthlyBudget), borderColor: "#f48fb1", borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false },
+            { label: "Savings", data: dailySavings, borderColor: "#669e7c", backgroundColor: "rgba(102, 158, 124, 0.1)", borderWidth: 2, pointRadius: 1, tension: 0.1, fill: true },
+            { label: "Savings Goal", data: labels.map(() => m.monthlySavingsGoal), borderColor: "#669e7c", borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false }
           ]
       },
-      options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          scales: { 
-              y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: {size: 10} } },
-              x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } 
-          },
-          plugins: { legend: { display: false } } 
-      }
+      options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: {size: 10} } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } }, plugins: { legend: { display: false } } }
   });
 }
 
@@ -1374,28 +1201,19 @@ function showTab(id){
   document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
   const btn = Array.from(document.querySelectorAll(".tabs button")).find(b => b.textContent.toLowerCase() === id);
   if(btn) btn.classList.add("active");
-  else if(event) event.target.classList.add("active");
-
   document.querySelectorAll('.tab-content').forEach(d => d.classList.add('hidden'));
   document.getElementById(id).classList.remove("hidden");
-  
   if(id === 'charts') render();
 }
 
 function exportCSV() {
     const m = getMonth();
     let csv = "Date,Name,Amount,Type,Category\n";
-    m.expenses.forEach(e => {
-        csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`;
-    });
+    m.expenses.forEach(e => { csv += `${e.date},${e.name},${e.amount},${e.type},${e.category}\n`; });
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `budget_${currentMonth}.csv`;
-    a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `budget_${currentMonth}.csv`; a.click();
 }
-
 </script>
 </body>
 </html>
