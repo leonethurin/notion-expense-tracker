@@ -280,9 +280,9 @@ td input:focus, td select:focus { background: white; border-color: var(--strawbe
 
 <script>
 // ==========================================
-// CONFIG: HARDCODED KVDB ID
+// CONFIG: SÄKERT LÄGE (Inget hårdkodat ID)
 // ==========================================
-const HARDCODED_BUCKET_ID = "Ejk5RwgCjteFs4XxxeaMxv"; 
+const HARDCODED_BUCKET_ID = ""; 
 // ==========================================
 
 const KEY_NAME = "expenseTracker_data"; 
@@ -299,6 +299,7 @@ initMonths();
 initApp();
 
 function initApp() {
+    // 1. Check code (empty now) or Storage
     if(HARDCODED_BUCKET_ID && HARDCODED_BUCKET_ID.length > 5) {
         userBucketId = HARDCODED_BUCKET_ID;
     } else {
@@ -306,8 +307,10 @@ function initApp() {
     }
 
     if(!userBucketId) {
+        // No ID found -> Show Setup Screen
         document.getElementById('setupScreen').classList.remove('hidden');
     } else {
+        // ID found -> Load Cache & Sync
         const cached = localStorage.getItem("budgetData_cache");
         if(cached) {
             try {
@@ -357,7 +360,7 @@ function showToast(message, type = "success") {
     setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
 }
 
-// === KVDB.IO SYNC ===
+// === KVDB.IO SYNC (FIXED: Handles 404/Empty Bucket) ===
 async function attemptSync() {
     if(!userBucketId) return;
     setStatus('loading');
@@ -370,7 +373,12 @@ async function attemptSync() {
         clearTimeout(id);
         
         if(!res.ok) {
-            if(res.status === 404) { return; } // No data yet, that's fine
+            if(res.status === 404) { 
+                // 404 means key doesn't exist yet (brand new bucket)
+                // This is normal! We treat it as success (synced but empty)
+                setStatus('saved');
+                return; 
+            }
             throw new Error("Server error");
         }
         
